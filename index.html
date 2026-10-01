@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- GRUENZEUG – gebaut 01.10.2026, 23:02. Nicht direkt öffnen: py tools/build.py setzt CSS, Code und Inhalte ein und schreibt dist/index.html -->
+<!-- GRUENZEUG – gebaut 01.10.2026, 23:40. Nicht direkt öffnen: py tools/build.py setzt CSS, Code und Inhalte ein und schreibt dist/index.html -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -336,7 +336,7 @@ a { color: var(--accent-text); }
 <body>
   <noscript>Gruenzeug braucht JavaScript.</noscript>
   <div id="app"></div>
-<script>const GRUEN_BUILD = {"id": "aa89754-20261001230236", "stamp": "01.10.2026, 23:02", "commit": "aa89754"};</script>
+<script>const GRUEN_BUILD = {"id": "b7c2568-20261001234032", "stamp": "01.10.2026, 23:40", "commit": "b7c2568"};</script>
 <script>
 /* GRUENZEUG – Hilfsfunktionen: DOM, Datum (Ortszeit), Zahlen (de-DE), Suche, Bilder verkleinern.
    `U` läuft auch in Node (tools/check.js, tools/selftest.js laden diese Datei). */
@@ -558,11 +558,48 @@ if (typeof module !== 'undefined') module.exports = Zip;
 //# sourceURL=js/zip.js
 </script>
 <script>
-/* GRUENZEUG – Daten: IndexedDB (Pflanzen, Einträge, Fotos, Merkliste), Einstellungen in localStorage, Sicherung als ZIP.
-   Pflanzen und Einträge liegen zusätzlich im Speicher (Map): die Oberfläche liest synchron, jede Änderung wird
-   sofort in IndexedDB geschrieben. Fotos werden erst bei Bedarf geladen.
-   Läuft nur im Browser (Backup-Logik ist in `Sicherung` gekapselt und im Selbsttest geprüft). */
-const SCHEMA = 1;   // Format der gespeicherten Daten. Änderungen → erhöhen und Übergang in Data.migrieren()
+/* GRUENZEUG – Verschlüsselung für den privaten Bereich (Web Crypto: PBKDF2 → AES-GCM).
+   Der Schlüssel entsteht aus der PIN und lebt nur im Arbeitsspeicher, solange der Bereich entsperrt ist.
+   Verschlüsselte Daten: iv (12 Byte) + Chiffretext, als Bytes oder Base64. Läuft nur im Browser. */
+const Krypto = {
+  key: null,                 // CryptoKey, solange entsperrt
+  ITER: 200000,
+
+  ok() { return typeof crypto !== 'undefined' && !!crypto.subtle; },
+  zufall(n) { return crypto.getRandomValues(new Uint8Array(n)); },
+  b64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return btoa(s); },
+  unb64(s) { const b = atob(s); const o = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) o[i] = b.charCodeAt(i); return o; },
+  neuesSalz() { return Krypto.b64(Krypto.zufall(16)); },
+
+  async ableiten(pin, saltB64) {
+    const roh = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: Krypto.unb64(saltB64), iterations: Krypto.ITER, hash: 'SHA-256' }, roh, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  },
+  async bytesMit(key, bytes) {
+    const iv = Krypto.zufall(12);
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes));
+    const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+    return out;
+  },
+  async entBytesMit(key, bytes) {
+    return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.subarray(0, 12) }, key, bytes.subarray(12)));
+  },
+  async encMit(key, obj) { return Krypto.b64(await Krypto.bytesMit(key, new TextEncoder().encode(JSON.stringify(obj)))); },
+  async decMit(key, s) { return JSON.parse(new TextDecoder().decode(await Krypto.entBytesMit(key, Krypto.unb64(s)))); },
+  enc(obj) { return Krypto.encMit(Krypto.key, obj); },
+  dec(s) { return Krypto.decMit(Krypto.key, s); },
+  encBytes(b) { return Krypto.bytesMit(Krypto.key, b); },
+  decBytes(b) { return Krypto.entBytesMit(Krypto.key, b); },
+};
+//# sourceURL=js/krypto.js
+</script>
+<script>
+/* GRUENZEUG – Daten: IndexedDB (Pflanzen, Einträge, Fotos, Merkliste, Sync-Warteschlange), Einstellungen in localStorage,
+   Sicherung als ZIP. Pflanzen und Einträge liegen zusätzlich im Speicher (Map): die Oberfläche liest synchron, jede
+   Änderung wird sofort in IndexedDB geschrieben und – wenn angemeldet – für den Cloud-Sync vorgemerkt (js/sync.js).
+   Jedes Dokument trägt `u` (Zeitpunkt der letzten Änderung, ms): bei Konflikten gewinnt das neuere.
+   Läuft nur im Browser. */
+const SCHEMA = 2;   // Format der gespeicherten Daten. Änderungen → erhöhen und Übergang in Data.migrieren()
 
 /** Einstellungen im Gerät (localStorage, immer mit try/catch: kann blockiert sein) */
 const Einst = {
@@ -576,21 +613,22 @@ const Data = {
   fluechtig: false,          // true = IndexedDB nicht verfügbar (z. B. privates Fenster): nichts bleibt erhalten
   plants: new Map(),
   entries: new Map(),
-  meta: {},
-  _urls: new Map(),          // 'id:thumb' → Objekt-URL
+  meta: {},                  // schema, wunsch, wunschU, upl (Fotos, die schon in der Cloud liegen)
+  _urls: new Map(),          // 'id:t' / 'id:f' → Objekt-URL
 
   /* ---------- IndexedDB-Grundlagen ---------- */
   _open() {
     return new Promise((res, rej) => {
       if (typeof indexedDB === 'undefined') return rej(new Error('kein IndexedDB'));
-      const r = indexedDB.open('gruenzeug', 1);
+      const r = indexedDB.open('gruenzeug', 2);
       r.onupgradeneeded = () => {
         const d = r.result;
-        d.createObjectStore('plants', { keyPath: 'id' });
-        const e = d.createObjectStore('entries', { keyPath: 'id' });
-        e.createIndex('plantId', 'plantId');
-        d.createObjectStore('photos', { keyPath: 'id' });
-        d.createObjectStore('meta', { keyPath: 'key' });
+        if (!d.objectStoreNames.contains('plants')) d.createObjectStore('plants', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('entries')) d.createObjectStore('entries', { keyPath: 'id' }).createIndex('plantId', 'plantId');
+        if (!d.objectStoreNames.contains('photos')) d.createObjectStore('photos', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
+        if (!d.objectStoreNames.contains('outbox')) d.createObjectStore('outbox', { keyPath: 'key' });   // Version 2: Sync-Warteschlange
+        if (!d.objectStoreNames.contains('cipher')) d.createObjectStore('cipher', { keyPath: 'key' });   // Version 2: verschlüsselte Cloud-Daten, noch gesperrt
       };
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error);
@@ -617,14 +655,15 @@ const Data = {
   async load() {
     try { Data.db = await Data._open(); } catch (e) { Data.db = null; Data.fluechtig = true; }
     Data.plants.clear(); Data.entries.clear(); Data.meta = {};
-    for (const p of await Data._getAll('plants')) Data.plants.set(p.id, p);
-    for (const e of await Data._getAll('entries')) Data.entries.set(e.id, e);
+    for (const p of await Data._getAll('plants')) { if (!p.u) p.u = p.erstellt || 1; Data.plants.set(p.id, p); }
+    for (const e of await Data._getAll('entries')) { if (!e.u) e.u = e.ts || 1; Data.entries.set(e.id, e); }
     for (const m of await Data._getAll('meta')) Data.meta[m.key] = m.value;
     await Data.migrieren();
   },
   async migrieren() {
     const v = Data.meta.schema || 0;
-    if (v < SCHEMA) await Data.setMeta('schema', SCHEMA);
+    if (v < SCHEMA) await Data.setMeta('schema', SCHEMA);   // 1 → 2: nur neue Speicher (Warteschlange); Dokumente bekommen `u` beim Laden
+    if (!Data.meta.upl) Data.meta.upl = {};
   },
   async setMeta(key, value) { Data.meta[key] = value; await Data._put('meta', { key, value }); },
 
@@ -632,16 +671,23 @@ const Data = {
   neuePflanze(kind, felder) {
     return Object.assign({ id: U.uid(), kind: kind || 'zimmer', name: '', status: 'aktiv', fakten: [], erstellt: Date.now() }, felder || {});
   },
-  async savePlant(p) { Data.plants.set(p.id, p); await Data._put('plants', p); return p; },
+  async savePlant(p) {
+    p.u = Date.now();
+    Data.plants.set(p.id, p);
+    await Data._put('plants', p);
+    await Sync.nachSpeichern('plant', p);
+    return p;
+  },
   /** Pflanze, ihre Einträge und die nur von ihr benutzten Fotos löschen */
   async delPlant(id) {
     const p = Data.plants.get(id);
     if (!p) return;
     const fotos = new Set(p.titelFoto ? [p.titelFoto] : []);
-    for (const e of Data.eintraege(id)) { (e.fotos || []).forEach((f) => fotos.add(f)); Data.entries.delete(e.id); await Data._del('entries', e.id); }
+    for (const e of Data.eintraege(id)) { (e.fotos || []).forEach((f) => fotos.add(f)); Data.entries.delete(e.id); await Data._del('entries', e.id); await Sync.nachLoeschen('entry', e.id); }
     Data.plants.delete(id);
     await Data._del('plants', id);
-    for (const q of Data.plants.values()) if (q.mutter === id) { delete q.mutter; await Data._put('plants', q); }
+    await Sync.nachLoeschen('plant', id);
+    for (const q of [...Data.plants.values()]) if (q.mutter === id) { delete q.mutter; await Data.savePlant(q); }
     const benutzt = Data.benutzteFotos();
     for (const f of fotos) if (!benutzt.has(f)) await Data.delFoto(f);
   },
@@ -653,12 +699,19 @@ const Data = {
   neuerEintrag(plantId, typ, felder) {
     return Object.assign({ id: U.uid(), plantId, typ, datum: U.heute(), ts: Date.now(), text: '', fotos: [], werte: {} }, felder || {});
   },
-  async saveEntry(e) { Data.entries.set(e.id, e); await Data._put('entries', e); return e; },
+  async saveEntry(e) {
+    e.u = Date.now();
+    Data.entries.set(e.id, e);
+    await Data._put('entries', e);
+    await Sync.nachSpeichern('entry', e);
+    return e;
+  },
   async delEntry(id) {
     const e = Data.entries.get(id);
     if (!e) return;
     Data.entries.delete(id);
     await Data._del('entries', id);
+    await Sync.nachLoeschen('entry', id);
     const benutzt = Data.benutzteFotos();
     for (const f of e.fotos || []) if (!benutzt.has(f)) await Data.delFoto(f);
   },
@@ -676,6 +729,23 @@ const Data = {
     return s;
   },
 
+  /** Änderungen aus der Cloud übernehmen: ohne erneutes Vormerken zum Hochladen */
+  async setzeLokal(kind, obj) {
+    (kind === 'plant' ? Data.plants : Data.entries).set(obj.id, obj);
+    await Data._put(kind === 'plant' ? 'plants' : 'entries', obj);
+  },
+  async entferneLokal(kind, id) {
+    const map = kind === 'plant' ? Data.plants : Data.entries;
+    const alt = map.get(id);
+    if (!alt) return false;
+    map.delete(id);
+    await Data._del(kind === 'plant' ? 'plants' : 'entries', id);
+    const fotos = kind === 'plant' ? (alt.titelFoto ? [alt.titelFoto] : []) : (alt.fotos || []);
+    const benutzt = Data.benutzteFotos();
+    for (const f of fotos) if (!benutzt.has(f)) await Data.delFoto(f, true);
+    return true;
+  },
+
   /* ---------- Fotos ---------- */
   async addFoto(file) {
     const b = await U.bildVerkleinern(file);
@@ -684,10 +754,17 @@ const Data = {
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     return f.id;
   },
-  async foto(id) { return Data._get('photos', id); },
-  async delFoto(id) {
+  /** Foto laden; fehlt es im Gerät und man ist angemeldet, kommt es aus der Cloud */
+  async foto(id) {
+    const f = await Data._get('photos', id);
+    if (f || !Sync.angemeldet()) return f;
+    return Sync.fotoHolen(id);
+  },
+  async delFoto(id, stumm) {
     for (const k of [id + ':t', id + ':f']) { const u = Data._urls.get(k); if (u) { URL.revokeObjectURL(u); Data._urls.delete(k); } }
     await Data._del('photos', id);
+    if (Data.meta.upl && Data.meta.upl[id]) { delete Data.meta.upl[id]; await Data.setMeta('upl', Data.meta.upl); }
+    if (!stumm) await Sync.nachFotoLoeschen(id);
   },
   /** Objekt-URL für ein Foto (zwischengespeichert). thumb=true → kleine Vorschau */
   async url(id, thumb) {
@@ -702,10 +779,15 @@ const Data = {
 
   /* ---------- Merkliste (Wunschpflanzen aus dem Lexikon) ---------- */
   wunsch() { return Data.meta.wunsch || []; },
+  async wunschSpeichern(liste) {
+    await Data.setMeta('wunsch', liste);
+    await Data.setMeta('wunschU', Date.now());
+    await Sync.nachMeta('wunsch');
+  },
   async wunschSetzen(artId, an) {
     const w = Data.wunsch().filter((x) => x !== artId);
     if (an) w.push(artId);
-    await Data.setMeta('wunsch', w);
+    await Data.wunschSpeichern(w);
   },
 
   /* ---------- Speicherplatz ---------- */
@@ -714,13 +796,20 @@ const Data = {
   },
   async fotoAnzahl() { return Data.db ? (await Data._req('photos', 'readonly', (tx) => tx.objectStore('photos').count())) || 0 : 0; },
 
-  /** Alles löschen (Daten im Gerät) */
-  async alleLoeschen() {
-    for (const s of ['plants', 'entries', 'photos', 'meta']) await Data._clear(s);
+  /** Alles im Gerät löschen. mitCloud: angemeldet → in der Cloud als gelöscht markieren (sonst nur lokal, alles kommt beim nächsten Sync zurück) */
+  async alleLoeschen(mitCloud) {
+    const grab = [];
+    if (mitCloud && Sync.angemeldet()) {
+      for (const p of Data.plants.values()) grab.push(['plant', p.id]);
+      for (const e of Data.entries.values()) grab.push(['entry', e.id]);
+    }
+    for (const s of ['plants', 'entries', 'photos', 'meta', 'outbox', 'cipher']) await Data._clear(s);
     for (const u of Data._urls.values()) URL.revokeObjectURL(u);
     Data._urls.clear();
     Data.plants.clear(); Data.entries.clear(); Data.meta = {};
     await Data.setMeta('schema', SCHEMA);
+    Data.meta.upl = {};
+    for (const [k, id] of grab) await Sync.nachLoeschen(k, id);
   },
 };
 
@@ -735,8 +824,8 @@ const Sicherung = {
     const fotoIds = new Set();
     plants.forEach((p) => p.titelFoto && fotoIds.add(p.titelFoto));
     entries.forEach((e) => (e.fotos || []).forEach((f) => fotoIds.add(f)));
-    const meta = Object.assign({}, Data.meta);
-    delete meta.schema;
+    const meta = {};
+    if (Data.meta.wunsch) meta.wunsch = Data.meta.wunsch;
     const dateien = [];
     const fotos = [];
     for (const id of fotoIds) {
@@ -761,7 +850,7 @@ const Sicherung = {
   /** modus 'zusammen' (vorhandene Daten bleiben, gleiche IDs werden überschrieben) oder 'ersetzen'. → Zähler */
   async einspielen(file, modus, fortschritt) {
     const { info, z } = await Sicherung.lesen(file);
-    if (modus === 'ersetzen') await Data.alleLoeschen();
+    if (modus === 'ersetzen') await Data.alleLoeschen(true);
     let n = 0;
     for (const f of info.photos || []) {
       const bytes = z.get('photos/' + f.id + '.jpg');
@@ -775,7 +864,7 @@ const Sicherung = {
     for (const p of info.plants || []) await Data.savePlant(p);
     for (const e of info.entries || []) await Data.saveEntry(e);
     const m = info.meta || {};
-    if (m.wunsch) await Data.setMeta('wunsch', [...new Set([...Data.wunsch(), ...m.wunsch])]);
+    if (m.wunsch) await Data.wunschSpeichern([...new Set([...Data.wunsch(), ...m.wunsch])]);
     return { pflanzen: (info.plants || []).length, eintraege: (info.entries || []).length, fotos: (info.photos || []).length };
   },
   /** Datei speichern: auf dem Handy über das Teilen-Menü, sonst Download */
@@ -792,6 +881,351 @@ const Sicherung = {
   },
 };
 //# sourceURL=js/db.js
+</script>
+<script>
+/* GRUENZEUG – Cloud-Sync mit Supabase (Frankfurt). Lokal zuerst: die App arbeitet immer auf den Daten im Gerät,
+   der Sync gleicht im Hintergrund ab.
+
+   Aufbau in der Cloud (docs/supabase.sql): Tabelle `docs` (kind plant|entry|meta, id, data, u, deleted, srv) und der
+   private Speicher `photos` (<user>/<fotoId>.jpg bzw. .enc). Zeilenschutz (RLS): jeder sieht nur seine eigenen Zeilen.
+
+   Ablauf einer Synchronisierung: 1. neue Zeilen holen (srv > Merkzeichen), je Dokument gewinnt das neuere `u`;
+   2. Warteschlange (IndexedDB `outbox`) hochladen; 3. Fotos hochladen/löschen. Gelöschtes wird als Grabstein
+   (deleted) gespeichert. Der private Bereich wird vor dem Hochladen mit dem PIN-Schlüssel verschlüsselt (Krypto);
+   solange er gesperrt ist, bleibt verschlüsselte Cloud-Ware in `cipher`, bis die PIN eingegeben wird.
+   Läuft nur im Browser. Für Tests kann `Sync.test = {url, key}` auf einen lokalen Nachbau zeigen (tools/mock_supabase.py). */
+const Sync = {
+  URL: 'https://ujzlexupbvunxjbgwsjw.supabase.co',
+  KEY: 'sb_publishable_1Px9I71_lvP09KRJ13YeWQ_zArrYpHM',     // „publishable“: darf öffentlich im Code stehen, die Daten schützt der Login
+  test: null,
+  status: { laeuft: false, fehler: null, zaehler: 0 },
+  _timer: null,
+  _holen: new Map(),
+
+  basis() { return (Sync.test && Sync.test.url) || Sync.URL; },
+  apikey() { return (Sync.test && Sync.test.key) || Sync.KEY; },
+  cfg() { return Einst.get('sync', null); },
+  cfgSetzen(teil) { Einst.set('sync', Object.assign({}, Sync.cfg(), teil)); },
+  angemeldet() { const c = Sync.cfg(); return !!(c && c.refresh); },
+
+  /* ---------- Anmeldung ---------- */
+  _fehlertext(j, status) {
+    const m = String((j && (j.msg || j.message || j.error_description || j.error)) || '');
+    if (/invalid login/i.test(m)) return 'E-Mail oder Passwort stimmt nicht.';
+    if (/already registered|already been registered/i.test(m)) return 'Zu dieser E-Mail gibt es schon ein Konto – bitte anmelden.';
+    if (/email not confirmed/i.test(m)) return 'Die E-Mail ist noch nicht bestätigt – bitte den Link in der Bestätigungs-Mail anklicken.';
+    if (/rate limit|too many/i.test(m)) return 'Zu viele Versuche – bitte kurz warten.';
+    if (/password/i.test(m) && /characters|weak/i.test(m)) return 'Das Passwort ist zu kurz oder zu einfach.';
+    return m || ('Fehler ' + status);
+  },
+  async _auth(pfad, body) {
+    let r;
+    try { r = await fetch(Sync.basis() + '/auth/v1/' + pfad, { method: 'POST', headers: { apikey: Sync.apikey(), 'content-type': 'application/json' }, body: JSON.stringify(body) }); }
+    catch (e) { throw new Error('Keine Verbindung zum Server.'); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(Sync._fehlertext(j, r.status));
+    return j;
+  },
+  _sitzung(j, email) {
+    const alt = Sync.cfg() || {};
+    const uid = (j.user && j.user.id) || alt.uid;
+    // anderer Account als zuvor: Merkzeichen zurücksetzen, sonst würden Daten des alten Kontos fehlen
+    const gleich = alt.uid && alt.uid === uid;
+    Einst.set('sync', { uid, email: email || (j.user && j.user.email) || alt.email, access: j.access_token, refresh: j.refresh_token, exp: Date.now() + (j.expires_in || 3600) * 1000, cursor: gleich ? alt.cursor || null : null, letzte: gleich ? alt.letzte || null : null, privatOffen: gleich ? alt.privatOffen : false });
+  },
+  /** → 'angemeldet' | 'bestaetigen' */
+  async registrieren(email, pw) {
+    const j = await Sync._auth('signup', { email, password: pw });
+    if (!j.access_token) return 'bestaetigen';
+    Sync._sitzung(j, email);
+    return 'angemeldet';
+  },
+  async anmelden(email, pw) {
+    const j = await Sync._auth('token?grant_type=password', { email, password: pw });
+    Sync._sitzung(j, email);
+    return 'angemeldet';
+  },
+  /** behalten=true: Daten im Gerät bleiben, aber ohne Sync. */
+  async abmelden() {
+    Einst.del('sync');
+    clearTimeout(Sync._timer);
+    await Data._clear('outbox'); await Data._clear('cipher');
+    Sync.status.fehler = null;
+  },
+  async token(erzwingen) {
+    const c = Sync.cfg();
+    if (!c || !c.refresh) throw new Error('Nicht angemeldet');
+    if (!erzwingen && c.exp > Date.now() + 60000) return c.access;
+    const j = await Sync._auth('token?grant_type=refresh_token', { refresh_token: c.refresh }).catch((e) => { throw new Error(/Verbindung/.test(e.message) ? e.message : 'Sitzung abgelaufen – bitte neu anmelden.'); });
+    Sync._sitzung(j);
+    return j.access_token;
+  },
+  async _anf(pfad, o) {
+    o = o || {};
+    const bau = async (t) => fetch(Sync.basis() + pfad, { method: o.method || 'GET', headers: Object.assign({ apikey: Sync.apikey(), Authorization: 'Bearer ' + t }, o.headers || {}), body: o.body });
+    let r;
+    try { r = await bau(await Sync.token()); if (r.status === 401) r = await bau(await Sync.token(true)); }
+    catch (e) { if (/Sitzung|Nicht angemeldet/.test(e.message)) throw e; throw new Error('Keine Verbindung zum Server.'); }
+    return r;
+  },
+  async _serverFehler(r, was) {
+    const j = await r.json().catch(() => ({}));
+    const m = (j && (j.message || j.error || j.msg)) || '';
+    if (r.status === 404 && /relation|table/i.test(m + '')) return new Error('Die Tabellen fehlen in Supabase – bitte das SQL-Skript ausführen.');
+    return new Error((was || 'Server') + ': ' + (m || r.status));
+  },
+
+  /* ---------- Vormerken (von Data aufgerufen) ---------- */
+  istPrivat(kind, obj) {
+    if (kind === 'plant') return obj.kind === 'cannabis';
+    const p = Data.plants.get(obj.plantId);
+    return !!p && p.kind === 'cannabis';
+  },
+  fotoPrivat(id) {
+    for (const p of Data.plants.values()) if (p.kind === 'cannabis' && p.titelFoto === id) return true;
+    for (const e of Data.entries.values()) if ((e.fotos || []).includes(id) && Sync.istPrivat('entry', e)) return true;
+    return false;
+  },
+  async _zeile(kind, obj) {
+    let data = obj;
+    if (Sync.istPrivat(kind, obj)) {
+      if (!Krypto.key) { Sync.cfgSetzen({ privatOffen: true }); return null; }   // gesperrt: später beim Entsperren nachholen
+      data = { _enc: await Krypto.enc(obj) };
+    }
+    return { kind, id: obj.id, data, u: obj.u, deleted: false };
+  },
+  async _einreihen(kind, obj) {
+    const row = await Sync._zeile(kind, obj);
+    if (row) await Data._put('outbox', { key: 'doc:' + kind + ':' + obj.id, row });
+  },
+  async _fotoMerken(id) {
+    if (id && !(Data.meta.upl || {})[id]) await Data._put('outbox', { key: 'foto:' + id, id });
+  },
+  async nachSpeichern(kind, obj) {
+    if (!Sync.angemeldet()) return;
+    await Sync._einreihen(kind, obj);
+    for (const f of kind === 'plant' ? (obj.titelFoto ? [obj.titelFoto] : []) : (obj.fotos || [])) await Sync._fotoMerken(f);
+    Sync.planen();
+  },
+  async nachLoeschen(kind, id) {
+    if (!Sync.angemeldet()) return;
+    await Data._put('outbox', { key: 'doc:' + kind + ':' + id, row: { kind, id, data: null, u: Date.now(), deleted: true } });
+    Sync.planen();
+  },
+  async nachMeta(id) {
+    if (!Sync.angemeldet()) return;
+    if (id === 'wunsch') await Data._put('outbox', { key: 'doc:meta:wunsch', row: { kind: 'meta', id: 'wunsch', data: { v: Data.wunsch() }, u: Data.meta.wunschU || Date.now(), deleted: false } });
+    if (id === 'privat') {
+      const c = Einst.get('pin', null);
+      await Data._put('outbox', { key: 'doc:meta:privat', row: c ? { kind: 'meta', id: 'privat', data: c, u: c.u || Date.now(), deleted: false } : { kind: 'meta', id: 'privat', data: null, u: Date.now(), deleted: true } });
+    }
+    Sync.planen();
+  },
+  async nachFotoLoeschen(id) {
+    if (!Sync.angemeldet()) return;
+    await Data._del('outbox', 'foto:' + id);
+    await Data._put('outbox', { key: 'fotodel:' + id, id });
+    Sync.planen();
+  },
+  planen() {
+    clearTimeout(Sync._timer);
+    Sync._timer = setTimeout(() => Sync.sync(), Sync.test ? 50 : 2500);
+  },
+  /** Anzahl noch nicht hochgeladener Änderungen */
+  async offen() { return (await Data._getAll('outbox')).length; },
+
+  /* ---------- Synchronisieren ---------- */
+  async sync() {
+    if (!Sync.angemeldet() || Sync.status.laeuft) return false;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+    Sync.status.laeuft = true;
+    Sync._meldung();
+    try {
+      await Sync.token();
+      const geaendert = await Sync._ziehen();
+      await Sync._schieben();
+      await Data.setMeta('upl', Data.meta.upl || {});
+      Sync.status.fehler = null;
+      Sync.cfgSetzen({ letzte: Date.now() });
+      if (geaendert) Sync._neuZeichnen();
+      return true;
+    } catch (e) {
+      Sync.status.fehler = e && e.message || String(e);
+      return false;
+    } finally {
+      Sync.status.laeuft = false;
+      Sync._meldung();
+    }
+  },
+  _meldung() { if (typeof Mehr !== 'undefined' && Mehr.syncAnzeige) Mehr.syncAnzeige(); },
+  _neuZeichnen() { if (typeof App !== 'undefined' && App._bereit && !document.querySelector('.sheet-bg, .lupe')) App.neu(); },
+
+  /** Neues aus der Cloud holen und übernehmen. → true, wenn sich lokal etwas geändert hat */
+  async _ziehen() {
+    const c = Sync.cfg();
+    let cursor = c.cursor || null;
+    const erstmals = !cursor;
+    const remote = new Map();
+    let geaendert = false;
+    for (;;) {
+      let q = '/rest/v1/docs?select=kind,id,data,u,deleted,srv&order=srv.asc&limit=500';
+      if (cursor) q += '&srv=gte.' + encodeURIComponent(cursor);
+      const r = await Sync._anf(q);
+      if (!r.ok) throw await Sync._serverFehler(r, 'Laden');
+      const rows = await r.json();
+      for (const z of rows) { remote.set(z.kind + ':' + z.id, z.u); if (await Sync._anwenden(z)) geaendert = true; }
+      const letzt = rows.length ? rows[rows.length - 1].srv : cursor;
+      if (rows.length < 500 || letzt === cursor) { cursor = letzt; break; }
+      cursor = letzt;
+    }
+    Sync.cfgSetzen({ cursor });
+    if (erstmals) await Sync._lokalesAnbieten(remote);
+    return geaendert;
+  },
+
+  /** Ein Dokument aus der Cloud anwenden. → true, wenn lokal geändert */
+  async _anwenden(z) {
+    const okey = 'doc:' + z.kind + ':' + z.id;
+    const ob = await Data._get('outbox', okey);
+    if (ob) { if (ob.row.u >= z.u) return false; await Data._del('outbox', okey); }   // lokal gleich alt oder neuer (z. B. neu verschlüsselt): bleibt, wird hochgeladen
+    if (z.deleted) {
+      if (z.kind === 'meta') {
+        if (z.id === 'privat' && Einst.get('pin', null)) { Einst.del('pin'); Krypto.key = null; Privat.offen = false; return true; }
+        return false;
+      }
+      const lokal = (z.kind === 'plant' ? Data.plants : Data.entries).get(z.id);
+      if (!lokal || lokal.u > z.u) return false;
+      return Data.entferneLokal(z.kind, z.id);
+    }
+    if (z.kind === 'meta') return Sync._metaAnwenden(z);
+    if (z.data && z.data._enc) {
+      await Data._put('cipher', { key: z.kind + ':' + z.id, row: z });
+      return Krypto.key ? Sync._cipherAnwenden(z) : false;
+    }
+    return Sync._docAnwenden(z.kind, z.data, z.u);
+  },
+  async _docAnwenden(kind, obj, u) {
+    const lokal = (kind === 'plant' ? Data.plants : Data.entries).get(obj.id);
+    if (lokal && lokal.u >= u) return false;
+    obj.u = u;
+    await Data.setzeLokal(kind, obj);
+    return true;
+  },
+  async _cipherAnwenden(z) {
+    let obj;
+    try { obj = await Krypto.dec(z.data._enc); } catch (e) { return false; }
+    await Data._del('cipher', z.kind + ':' + z.id);
+    return Sync._docAnwenden(z.kind, obj, z.u);
+  },
+  async _metaAnwenden(z) {
+    if (z.id === 'wunsch') {
+      if ((Data.meta.wunschU || 0) >= z.u) return false;
+      await Data.setMeta('wunsch', z.data.v || []); await Data.setMeta('wunschU', z.u);
+      return true;
+    }
+    if (z.id === 'privat') {
+      const lokal = Einst.get('pin', null);
+      if (lokal && (lokal.u || 0) >= z.u) return false;
+      if (lokal && lokal.salt !== z.data.salt) { Krypto.key = null; Privat.offen = false; }
+      Einst.set('pin', z.data);
+      return true;
+    }
+    return false;
+  },
+
+  /** Beim ersten Abgleich: alles, was lokal neuer ist oder in der Cloud fehlt, vormerken */
+  async _lokalesAnbieten(remote) {
+    const neuer = (kind, o) => !remote.has(kind + ':' + o.id) || remote.get(kind + ':' + o.id) < o.u;
+    for (const p of Data.plants.values()) if (neuer('plant', p)) { await Sync._einreihen('plant', p); if (p.titelFoto) await Sync._fotoMerken(p.titelFoto); }
+    for (const e of Data.entries.values()) if (neuer('entry', e)) { await Sync._einreihen('entry', e); for (const f of e.fotos || []) await Sync._fotoMerken(f); }
+    if (Data.wunsch().length && (!remote.has('meta:wunsch') || remote.get('meta:wunsch') < (Data.meta.wunschU || 1))) { if (!Data.meta.wunschU) await Data.setMeta('wunschU', Date.now()); await Sync.nachMeta('wunsch'); }
+    const pin = Einst.get('pin', null);
+    if (pin && !remote.has('meta:privat')) { if (!pin.u) { pin.u = Date.now(); Einst.set('pin', pin); } await Sync.nachMeta('privat'); }
+  },
+
+  /** Warteschlange hochladen */
+  async _schieben() {
+    const c = Sync.cfg();
+    const items = await Data._getAll('outbox');
+    const docs = items.filter((i) => i.row);
+    for (let i = 0; i < docs.length; i += 100) {
+      const teil = docs.slice(i, i + 100);
+      const r = await Sync._anf('/rest/v1/docs?on_conflict=user_id,kind,id', { method: 'POST', headers: { 'content-type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(teil.map((x) => Object.assign({ user_id: c.uid }, x.row))) });
+      if (!r.ok) throw await Sync._serverFehler(r, 'Hochladen');
+      for (const x of teil) { const jetzt = await Data._get('outbox', x.key); if (jetzt && jetzt.row.u === x.row.u) await Data._del('outbox', x.key); }
+    }
+    for (const it of items.filter((i) => i.key.startsWith('foto:'))) await Sync._fotoHoch(it);
+    for (const it of items.filter((i) => i.key.startsWith('fotodel:'))) await Sync._fotoWeg(it);
+  },
+  async _fotoHoch(it) {
+    const c = Sync.cfg();
+    const f = await Data._get('photos', it.id);
+    if (!f) { await Data._del('outbox', it.key); return; }
+    const privat = Sync.fotoPrivat(it.id);
+    let body, pfad, typ;
+    if (privat) {
+      if (!Krypto.key) { Sync.cfgSetzen({ privatOffen: true }); return; }
+      body = new Blob([await Krypto.encBytes(new Uint8Array(await f.full.arrayBuffer()))]); pfad = c.uid + '/' + it.id + '.enc'; typ = 'application/octet-stream';
+    } else { body = f.full; pfad = c.uid + '/' + it.id + '.jpg'; typ = 'image/jpeg'; }
+    const r = await Sync._anf('/storage/v1/object/photos/' + pfad, { method: 'POST', headers: { 'content-type': typ, 'x-upsert': 'true' }, body });
+    if (!r.ok) throw await Sync._serverFehler(r, 'Foto hochladen');
+    (Data.meta.upl = Data.meta.upl || {})[it.id] = 1;
+    await Data._del('outbox', it.key);
+  },
+  async _fotoWeg(it) {
+    const c = Sync.cfg();
+    const r = await Sync._anf('/storage/v1/object/photos', { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ prefixes: [c.uid + '/' + it.id + '.jpg', c.uid + '/' + it.id + '.enc'] }) });
+    if (!r.ok) throw await Sync._serverFehler(r, 'Foto löschen');
+    await Data._del('outbox', it.key);
+  },
+
+  /** Foto, das nur in der Cloud liegt, herunterladen und lokal speichern (Original + Vorschau) */
+  fotoHolen(id) {
+    if (Sync._holen.has(id)) return Sync._holen.get(id);
+    const p = (async () => {
+      const c = Sync.cfg();
+      let bytes = null;
+      for (const ext of ['jpg', 'enc']) {
+        if (ext === 'enc' && !Krypto.key) break;
+        let r;
+        try { r = await Sync._anf('/storage/v1/object/authenticated/photos/' + c.uid + '/' + id + '.' + ext); } catch (e) { return null; }
+        if (!r.ok) continue;
+        bytes = new Uint8Array(await r.arrayBuffer());
+        if (ext === 'enc') { try { bytes = await Krypto.decBytes(bytes); } catch (e) { bytes = null; } }
+        break;
+      }
+      if (!bytes) return null;
+      const blob = new Blob([bytes], { type: 'image/jpeg' });
+      let thumb = blob, w = 0, h = 0;
+      try { const b = await U.bildVerkleinern(blob); thumb = b.thumb; w = b.w; h = b.h; } catch (e) { /* Vorschau = Original */ }
+      const rec = { id, full: blob, thumb, w, h, ts: Date.now() };
+      await Data._put('photos', rec);
+      (Data.meta.upl = Data.meta.upl || {})[id] = 1;
+      return rec;
+    })().finally(() => Sync._holen.delete(id));
+    Sync._holen.set(id, p);
+    return p;
+  },
+
+  /* ---------- Privater Bereich ---------- */
+  /** Nach der PIN-Eingabe: gesperrte Cloud-Daten entschlüsseln; Zurückgestelltes hochladen */
+  async nachEntsperren() {
+    let geaendert = false;
+    for (const row of await Data._getAll('cipher')) if (await Sync._cipherAnwenden(row.row)) geaendert = true;
+    if (Sync.angemeldet() && (Sync.cfg() || {}).privatOffen) await Sync.privatNeuEinreihen();
+    if (geaendert) Sync._neuZeichnen();
+  },
+  /** Alle privaten Dokumente und Fotos neu verschlüsselt hochladen (nach PIN-Änderung oder nachgeholt) */
+  async privatNeuEinreihen() {
+    if (!Sync.angemeldet() || !Krypto.key) return;
+    for (const p of Data.plants.values()) if (p.kind === 'cannabis') { await Sync._einreihen('plant', p); if (p.titelFoto) { delete Data.meta.upl[p.titelFoto]; await Sync._fotoMerken(p.titelFoto); } }
+    for (const e of Data.entries.values()) if (Sync.istPrivat('entry', e)) { await Sync._einreihen('entry', e); for (const f of e.fotos || []) { delete Data.meta.upl[f]; await Sync._fotoMerken(f); } }
+    await Data.setMeta('upl', Data.meta.upl);
+    Sync.cfgSetzen({ privatOffen: false });
+    Sync.planen();
+  },
+};
+//# sourceURL=js/sync.js
 </script>
 <script>
 /* GRUENZEUG – Inhalte und Konfiguration: Sammlungen (Arten, Schädlinge, Wissen, Diagnose, Tipps) werden von den
@@ -2678,7 +3112,11 @@ const Heute = {
     const letzte = Einst.get('letzteSicherung', null);
     const ersterTag = aktive.length ? U.iso(new Date(Math.min(...aktive.map((p) => p.erstellt || Date.now())))) : null;
     const tageSeit = letzte ? U.tageZwischen(letzte, U.heute()) : (ersterTag ? U.tageZwischen(ersterTag, U.heute()) : 0);
-    if (aktive.length && tageSeit >= (letzte ? 30 : 7) && Einst.get('sicherungHinweis', '') !== U.heute()) {
+    if (aktive.length && !Sync.angemeldet() && Einst.get('cloudHinweis', '') < U.heute()) {
+      w.append(U.el('div', { class: 'banner' }, App.icon('warnung', 22), U.el('span', { text: 'Deine Daten liegen nur auf diesem Gerät. Mit Cloud-Sync sind sie sicher.' }),
+        U.el('button', { class: 'btn klein sekundaer', text: 'Einrichten', onclick: () => { App.tab('mehr'); App.oeffne(() => Mehr.cloud()); } }),
+        U.el('button', { class: 'ib', 'aria-label': 'Heute nicht mehr', style: { width: '34px', height: '34px' }, onclick: () => { Einst.set('cloudHinweis', U.plusTage(U.heute(), 2)); App.neu(); } }, App.icon('x'))));
+    } else if (aktive.length && !Sync.angemeldet() && tageSeit >= (letzte ? 30 : 7) && Einst.get('sicherungHinweis', '') !== U.heute()) {
       w.append(U.el('div', { class: 'banner' }, App.icon('warnung', 22), U.el('span', { text: letzte ? 'Letzte Sicherung ' + U.rel(letzte) + '.' : 'Noch keine Sicherung deiner Daten.' }),
         U.el('button', { class: 'btn klein sekundaer', text: 'Sichern', onclick: () => Mehr.sichern() }),
         U.el('button', { class: 'ib', 'aria-label': 'Heute nicht mehr', style: { width: '34px', height: '34px' }, onclick: () => { Einst.set('sicherungHinweis', U.heute()); App.neu(); } }, App.icon('x'))));
@@ -3316,27 +3754,50 @@ const Privat = {
       return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
     } catch (e) { return 'h' + U.hash(salt + ':' + pin); }   // ohne Web Crypto (z. B. file://): einfacher Hash
   },
+  /** PIN festlegen: Schlüssel ableiten, Prüfwert („Kanarienvogel“) speichern. Ohne Web Crypto (z. B. file://) nur Hash, kein Cloud-Schutz. */
   async setzen(pin) {
-    const salt = U.uid() + U.uid();
-    Einst.set('pin', { salt, hash: await Privat.hash(pin, salt), len: pin.length });
+    let cfg;
+    if (Krypto.ok()) {
+      const salt = Krypto.neuesSalz();
+      const key = await Krypto.ableiten(pin, salt);
+      cfg = { v: 2, salt, canary: await Krypto.encMit(key, 'gruenzeug-ok'), len: pin.length, u: Date.now() };
+      Krypto.key = key;
+    } else {
+      const salt = U.uid() + U.uid();
+      cfg = { salt, hash: await Privat.hash(pin, salt), len: pin.length, u: Date.now() };
+    }
+    Einst.set('pin', cfg);
+    await Sync.nachMeta('privat');
+    await Sync.privatNeuEinreihen();
   },
   async pruefen(pin) {
     const c = Privat.cfg();
-    return !!c && (await Privat.hash(pin, c.salt)) === c.hash;
+    if (!c) return false;
+    if (c.v === 2) {
+      try {
+        const key = await Krypto.ableiten(pin, c.salt);
+        if ((await Krypto.decMit(key, c.canary)) !== 'gruenzeug-ok') return false;
+        Krypto.key = key;
+        return true;
+      } catch (e) { return false; }
+    }
+    if ((await Privat.hash(pin, c.salt)) !== c.hash) return false;   // alter Stand (nur Hash): beim ersten Entsperren auf Verschlüsselung umstellen
+    if (Krypto.ok()) await Privat.setzen(pin);
+    return true;
   },
 
   /** Ziffernfeld. onFertig(pin) → true = schließen, false = Fehler (Schütteln). laenge: feste Länge (Entsperren) oder null (Neu: 4–6 mit ✓) */
   pinFeld(titel, text, laenge, onFertig, extra) {
     let pin = '';
     const punkte = U.el('div', { class: 'pin' });
-    const zeichne = () => { punkte.replaceChildren(); const n = laenge || Math.max(4, pin.length); for (let i = 0; i < n; i++) punkte.append(U.el('i', { class: i < pin.length ? 'an' : '' })); };
+    const zeichne = () => { punkte.replaceChildren(); const n = laenge || Math.max(6, pin.length); for (let i = 0; i < n; i++) punkte.append(U.el('i', { class: i < pin.length ? 'an' : '' })); };
     const senden = async () => {
       if (laenge ? pin.length !== laenge : pin.length < 4) return;
       const ok = await onFertig(pin);
       if (ok) s.zu();
       else { pin = ''; zeichne(); punkte.classList.remove('schuettel'); void punkte.offsetWidth; punkte.classList.add('schuettel'); }
     };
-    const taste = (z) => { if (pin.length < (laenge || 6)) { pin += z; zeichne(); if (laenge && pin.length === laenge) senden(); } };
+    const taste = (z) => { if (pin.length < (laenge || 10)) { pin += z; zeichne(); if (laenge && pin.length === laenge) senden(); } };
     const feld = U.el('div', { class: 'ziffern' });
     ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((z) => feld.append(U.el('button', { onclick: () => taste(z), text: z, 'aria-label': z })));
     feld.append(U.el('button', { 'aria-label': 'Löschen', onclick: () => { pin = pin.slice(0, -1); zeichne(); } }, App.icon('zurueck')),
@@ -3356,12 +3817,12 @@ const Privat = {
     const c = Privat.cfg();
     Privat.pinFeld('Entsperren', 'PIN eingeben', c.len, async (pin) => {
       if (!(await Privat.pruefen(pin))) return false;
-      Privat.offen = true; Privat._zeigen(); return true;
+      Privat.offen = true; Sync.nachEntsperren(); Privat._zeigen(); return true;
     }, U.el('button', { class: 'btn klein ghost', style: { marginTop: '18px' }, text: 'PIN vergessen?', onclick: () => Privat.zuruecksetzen() }));
   },
   _zeigen() { App.oeffne(() => Sammlung.seite('cannabis')); },
   sperren() {
-    Privat.offen = false;
+    Privat.offen = false; Krypto.key = null;
     if (App.seiten.some((s) => s.privat)) App.tab(App.aktTab);
     App.toast('Gesperrt');
   },
@@ -3370,11 +3831,11 @@ const Privat = {
   einrichten() {
     const inh = U.el('div', null,
       U.el('p', { text: 'Ein zweites, verstecktes Logbuch für den Grow – mit eigenen Eintragstypen (Phasen, pH/EC, Training, Ernte …). Es taucht nirgends in Sammlung, Lexikon oder „Heute“ auf.' }),
-      U.el('div', { class: 'box warn' }, U.el('b', { text: 'Wichtig' }), 'Die PIN sperrt nur die Ansicht in der App. Die Daten liegen unverschlüsselt im Gerät – schütze das Handy selbst mit Gerätesperre. Ohne PIN lässt sich der Bereich nur zurücksetzen (Grow-Daten werden dabei gelöscht).'),
+      U.el('div', { class: 'box warn' }, U.el('b', { text: 'Wichtig' }), 'Die PIN sperrt die Ansicht, und aus ihr entsteht der Schlüssel, mit dem der Bereich in der Cloud verschlüsselt wird (bei Cloud-Sync). Im Gerät selbst liegen die Daten unverschlüsselt – schütze das Handy mit Gerätesperre. Je länger die PIN, desto sicherer (empfohlen: 8+ Ziffern). Ohne PIN lässt sich der Bereich nur zurücksetzen, die Grow-Daten werden dabei gelöscht.'),
       U.el('div', { class: 'box' }, U.el('b', { text: 'Rechtliches' }), 'In Deutschland ist privater Eigenanbau für Erwachsene (ab 18) unter Auflagen erlaubt, derzeit bis zu 3 Pflanzen pro Person, geschützt vor Kindern und Dritten. Angaben ohne Gewähr – die aktuelle Rechtslage prüfst du selbst.'));
     const s = App.sheet({ titel: 'Privaten Bereich einrichten', inhalt: inh, speichern: 'PIN festlegen', onSpeichern: async () => {
       setTimeout(() => {
-        Privat.pinFeld('Neue PIN', '4 bis 6 Ziffern, dann ✓', null, async (p1) => {
+        Privat.pinFeld('Neue PIN', '4 bis 10 Ziffern, dann ✓ – länger = sicherer', null, async (p1) => {
           setTimeout(() => Privat.pinFeld('PIN wiederholen', 'Zur Bestätigung noch einmal', null, async (p2) => {
             if (p1 !== p2) { App.toast('Die PINs stimmen nicht überein'); return false; }
             await Privat.setzen(p2); Privat.offen = true; App.toast('Privater Bereich eingerichtet'); App.neu(); return true;
@@ -3391,14 +3852,15 @@ const Privat = {
     const ok = await App.bestaetigen('Privaten Bereich zurücksetzen?', 'Die PIN wird entfernt und ' + (n ? 'alle ' + U.plural(n, 'Pflanze', 'Pflanzen') + ' im Grow-Logbuch samt Einträgen und Fotos werden gelöscht' : 'der Bereich deaktiviert') + '. Das lässt sich nicht rückgängig machen (außer über eine Sicherung).', { ok: 'Zurücksetzen', gefahr: true });
     if (!ok) return;
     for (const p of Data.liste('cannabis')) await Data.delPlant(p.id);
-    Einst.del('pin'); Privat.offen = false;
+    Einst.del('pin'); Privat.offen = false; Krypto.key = null;
+    await Sync.nachMeta('privat');
     App.toast('Zurückgesetzt'); App.tab('mehr');
   },
 
   async pinAendern() {
     Privat.pinFeld('Aktuelle PIN', 'Zur Sicherheit erst die alte PIN', Privat.cfg().len, async (alt) => {
       if (!(await Privat.pruefen(alt))) return false;
-      setTimeout(() => Privat.pinFeld('Neue PIN', '4 bis 6 Ziffern, dann ✓', null, async (n1) => { await Privat.setzen(n1); App.toast('PIN geändert'); return true; }), 220);
+      setTimeout(() => Privat.pinFeld('Neue PIN', '4 bis 10 Ziffern, dann ✓ – länger = sicherer', null, async (n1) => { await Privat.setzen(n1); App.toast('PIN geändert'); return true; }), 220);
       return true;
     });
   },
@@ -3414,7 +3876,7 @@ const Privat = {
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') Privat._weg = Date.now();
-  else if (Privat.offen && Privat._weg && Date.now() - Privat._weg > 60000) { Privat.offen = false; if (App.seiten.some((s) => s.privat)) App.tab(App.aktTab); }
+  else if (Privat.offen && Privat._weg && Date.now() - Privat._weg > 60000) { Privat.offen = false; Krypto.key = null; if (App.seiten.some((s) => s.privat)) App.tab(App.aktTab); }
 });
 //# sourceURL=js/privat.js
 </script>
@@ -3434,6 +3896,7 @@ const Mehr = {
 
     w.append(App.abschnitt('Daten'));
     w.append(U.el('div', { class: 'card flach' },
+      App.zeile('Cloud-Sync', Sync.angemeldet() ? Mehr.syncText() : 'Nicht eingerichtet – Daten nur auf diesem Gerät', 'teilen', () => App.oeffne(() => Mehr.cloud())),
       App.zeile('Sicherung erstellen', letzte ? 'Zuletzt ' + U.rel(letzte) : 'Noch nie gesichert', 'teilen', () => Mehr.sichern()),
       App.zeile('Sicherung laden', 'Aus einer Gruenzeug-Datei wiederherstellen', 'ordner', () => Mehr.laden())));
 
@@ -3447,6 +3910,69 @@ const Mehr = {
     ver.addEventListener('click', () => { if (Privat.aktiv() && Einst.get('pinVerstecken', false)) { Mehr._versionKlicks++; clearTimeout(Mehr._vt); Mehr._vt = setTimeout(() => { Mehr._versionKlicks = 0; }, 2500); if (Mehr._versionKlicks >= 5) { Mehr._versionKlicks = 0; Privat.oeffnen(); } } });
     w.append(ver);
     return { titel: 'Mehr', sub: aktive.length ? U.plural(aktive.length, 'Pflanze', 'Pflanzen') + ' in deiner Sammlung' : 'Gruenzeug', inhalt: w };
+  },
+
+  /* ---------- Cloud-Sync ---------- */
+  syncText() {
+    const c = Sync.cfg();
+    if (!c) return '';
+    if (Sync.status.laeuft) return 'Wird synchronisiert …';
+    if (Sync.status.fehler) return 'Fehler: ' + Sync.status.fehler;
+    return c.letzte ? 'Synchronisiert ' + U.rel(U.iso(new Date(c.letzte))) + ', ' + new Date(c.letzte).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'Angemeldet';
+  },
+  syncAnzeige() { const el = document.getElementById('sync-status'); if (el) el.textContent = Mehr.syncText(); },
+
+  cloud() {
+    const w = U.el('div');
+    const c = Sync.cfg();
+    if (!Sync.angemeldet()) {
+      const mail = F.text('E-Mail', c && c.email || '', { typ: 'email', inputmode: 'email' });
+      const pw = F.text('Passwort', '', { typ: 'password', platz: 'mindestens 8 Zeichen' });
+      pw.input.setAttribute('autocomplete', 'current-password');
+      const meldung = U.el('div', { class: 'hinweis', style: { minHeight: '20px' } });
+      const los = async (neu) => {
+        const e = mail.wert(), p = pw.input.value;
+        if (!/^\S+@\S+\.\S+$/.test(e)) { meldung.textContent = 'Bitte eine gültige E-Mail eingeben.'; return; }
+        if (p.length < 8) { meldung.textContent = 'Das Passwort braucht mindestens 8 Zeichen.'; return; }
+        meldung.textContent = 'Einen Moment …';
+        try {
+          const r = neu ? await Sync.registrieren(e, p) : await Sync.anmelden(e, p);
+          if (r === 'bestaetigen') { meldung.textContent = 'Fast geschafft: Du bekommst eine Bestätigungs-Mail. Klicke auf den Link darin, dann hier „Anmelden“.'; return; }
+          App.toast('Angemeldet – Daten werden abgeglichen …', 3000);
+          App.neu();
+          const ok = await Sync.sync();
+          App.toast(ok ? 'Alles synchronisiert' : 'Sync: ' + Sync.status.fehler, 4000);
+          App.neu();
+        } catch (err) { meldung.textContent = err.message || String(err); }
+      };
+      w.append(U.el('div', { class: 'box' }, U.el('b', { text: 'Deine Daten sicher in der Cloud' }), 'Mit einem Konto werden Pflanzen, Einträge und Fotos automatisch gesichert. Gehen Browserdaten verloren oder kommt ein neues Handy, meldest du dich an und alles ist wieder da – auch auf dem Laptop. Die App funktioniert weiter offline und gleicht ab, sobald du online bist.'),
+        U.el('div', { class: 'card' }, mail.el, pw.el, meldung,
+          U.el('div', { class: 'btnreihe' }, U.el('button', { class: 'btn', text: 'Anmelden', onclick: () => los(false) }), U.el('button', { class: 'btn sekundaer', text: 'Konto erstellen', onclick: () => los(true) }))),
+        U.el('p', { class: 'hinweis', text: 'Deine vorhandenen Daten bleiben erhalten und werden beim ersten Abgleich hochgeladen. Der Grow-Bereich wird mit deiner PIN verschlüsselt, bevor er die Cloud erreicht.' }));
+    } else {
+      const status = U.el('div', { id: 'sync-status', class: 'muted', text: Mehr.syncText() });
+      const offen = U.el('div', { class: 'muted klein' });
+      Sync.offen().then((n) => { offen.textContent = n ? n + ' Änderungen warten auf den Upload.' : 'Alles hochgeladen.'; });
+      w.append(U.el('div', { class: 'card' }, U.el('div', { class: 'etikett', text: 'Angemeldet als' }), U.el('div', { style: { fontFamily: 'var(--serif)', fontSize: '20px', fontWeight: 600, margin: '2px 0 6px', overflowWrap: 'anywhere' }, text: c.email || '' }), status, offen,
+        U.el('div', { class: 'btnreihe', style: { marginTop: '12px' } },
+          U.el('button', { class: 'btn', text: 'Jetzt synchronisieren', onclick: async () => { const ok = await Sync.sync(); App.toast(ok ? 'Synchronisiert' : 'Fehler: ' + (Sync.status.fehler || 'unbekannt'), 3500); App.neu(); } }))));
+      w.append(App.abschnitt('Wissenswertes'));
+      w.append(U.el('div', { class: 'card prose' }, U.md('- Änderungen werden automatisch hochgeladen, sobald du online bist.\n- Auf einem neuen Gerät: anmelden, die Daten kommen zurück; Fotos laden beim Ansehen nach.\n- Gelöschtes wird auch in der Cloud gelöscht.\n- Bei gleichzeitigen Änderungen auf zwei Geräten gewinnt die neuere.\n- Der Grow-Bereich ist verschlüsselt; ohne PIN lässt er sich nicht wiederherstellen.')));
+      w.append(U.el('div', { class: 'card flach' },
+        App.zeile('Alle Fotos auf dieses Gerät laden', 'Für die Nutzung ohne Netz', 'bild', () => Mehr.fotosLaden()),
+        App.zeile('Abmelden', 'Daten bleiben auf diesem Gerät, der Sync stoppt', 'schloss', async () => { if (await App.bestaetigen('Abmelden?', 'Deine Daten bleiben auf diesem Gerät. Änderungen werden nicht mehr in die Cloud übertragen, bis du dich wieder anmeldest.', { ok: 'Abmelden' })) { await Sync.abmelden(); App.toast('Abgemeldet'); App.neu(); } })));
+    }
+    return { titel: 'Cloud-Sync', zurueck: true, inhalt: w };
+  },
+
+  async fotosLaden() {
+    const fehlend = [];
+    for (const id of Data.benutzteFotos()) if (!(await Data._get('photos', id))) fehlend.push(id);
+    if (!fehlend.length) { App.toast('Alle Fotos sind schon auf diesem Gerät'); return; }
+    let n = 0;
+    for (const id of fehlend) { await Sync.fotoHolen(id); if (++n % 5 === 0) App.toast('Fotos ' + n + ' / ' + fehlend.length, 2000); }
+    await Data.setMeta('upl', Data.meta.upl);
+    App.toast(n + ' Fotos geladen');
   },
 
   statistik() {
@@ -3548,8 +4074,14 @@ const Mehr = {
         Data.fluechtig ? U.el('div', { class: 'box rot', style: { marginTop: '10px' } }, U.el('b', { text: 'Daten werden nicht gespeichert' }), 'Der Browser blockiert den Speicher (privates Fenster?). Öffne die App normal oder lege sie auf den Home-Bildschirm.') : U.el('p', { class: 'hinweis', text: 'Fotos werden verkleinert (max. 1600 px) gespeichert. Sichere regelmäßig – Browserdaten können gelöscht werden.' }));
     });
     w.append(App.abschnitt('Gefahrenbereich'));
-    w.append(U.el('div', { class: 'card flach' }, App.zeile('Alle Daten löschen', 'Pflanzen, Einträge, Fotos – nur auf diesem Gerät', 'trash', async () => {
-      if (await App.bestaetigen('Wirklich alles löschen?', 'Alle Pflanzen, Einträge und Fotos auf diesem Gerät werden entfernt. Lege vorher eine Sicherung an.', { ok: 'Alles löschen', gefahr: true })) { await Data.alleLoeschen(); Einst.del('pin'); Privat.offen = false; App.toast('Alles gelöscht'); App.tab('heute'); }
+    w.append(U.el('div', { class: 'card flach' }, App.zeile('Alle Daten auf diesem Gerät löschen', Sync.angemeldet() ? 'Aus der Cloud kommt alles beim nächsten Sync zurück' : 'Pflanzen, Einträge, Fotos – ohne Sicherung nicht zurückholbar', 'trash', async () => {
+      const cloud = Sync.angemeldet();
+      if (await App.bestaetigen('Wirklich alles löschen?', cloud ? 'Alle Daten auf diesem Gerät werden entfernt. Sie bleiben in der Cloud und kommen beim nächsten Abgleich zurück.' : 'Alle Pflanzen, Einträge und Fotos auf diesem Gerät werden entfernt. Lege vorher eine Sicherung an.', { ok: 'Alles löschen', gefahr: true })) {
+        await Data.alleLoeschen(false); Einst.del('pin'); Privat.offen = false; Krypto.key = null;
+        if (cloud) Sync.cfgSetzen({ cursor: null });
+        App.toast('Gelöscht'); App.tab('heute');
+        if (cloud) Sync.sync();
+      }
     })));
     return { titel: 'Einstellungen', zurueck: true, inhalt: w };
   },
@@ -3588,14 +4120,17 @@ const Updates = {
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && typeof GRUEN_BUILD !== 'undefined') {
     navigator.serviceWorker.register('sw.js').catch(() => { /* ohne Service Worker geht es auch, nur nicht offline */ });
   }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') Updates.pruefen(false); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { Updates.pruefen(false); Sync.sync(); } });
+  window.addEventListener('online', () => Sync.sync());
+  setInterval(() => { if (document.visibilityState === 'visible') Sync.sync(); }, 5 * 60 * 1000);
   setTimeout(() => Updates.pruefen(false), 3000);
+  if (!/[?&]selftest/.test(location.search)) setTimeout(() => Sync.sync(), 800);
   if (/[?&]selftest/.test(location.search)) {
     const s = document.createElement('script'); s.src = 'selftest.js'; document.body.append(s);
   }
 })();
 
-window.gruen = { App, Data, Gruen, Einst, Sicherung, Pflege, Privat, Updates, U, Zip };
+window.gruen = { App, Data, Gruen, Einst, Sicherung, Pflege, Privat, Updates, U, Zip, Sync, Krypto };
 //# sourceURL=js/main.js
 </script>
 </body>

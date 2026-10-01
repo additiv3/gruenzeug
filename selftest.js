@@ -3,8 +3,8 @@
    PIN und alle Seiten, und stellt danach deine Daten wieder her. Ergebnis: window.gruenTest {fails, errors, ok}
    und ein Kasten auf der Seite. Neue Funktionen → hier ergänzen. */
 (async function selftest() {
-  const { App, Data, Gruen, Einst, Sicherung, Pflege, Privat, U, Zip } = window.gruen;
-  const t = { ok: 0, fails: [], errors: [] };
+  const { App, Data, Gruen, Einst, Sicherung, Pflege, Privat, U, Zip, Sync, Krypto } = window.gruen;
+  const t = { ok: 0, fails: [], errors: [], uebersprungen: [] };
   const pruefe = (b, msg) => { if (b) t.ok++; else t.fails.push(msg); };
   const gleich = (a, b, msg) => pruefe(JSON.stringify(a) === JSON.stringify(b), msg + ' – erwartet ' + JSON.stringify(b) + ', war ' + JSON.stringify(a));
   const schritt = async (name, fn) => { try { await fn(); } catch (e) { t.errors.push(name + ': ' + (e && e.stack || e)); } };
@@ -15,7 +15,8 @@
   // Sicherung der echten Daten
   const meineEinst = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('gruen.')) meineEinst[k] = localStorage.getItem(k); }
   const meineDaten = await Sicherung.erstellen({});
-  await Data.alleLoeschen(); Einst.del('pin'); Privat.offen = false;
+  Einst.del('sync');   // wichtig: Testdaten dürfen nie in die echte Cloud gelangen
+  await Data.alleLoeschen(); Einst.del('pin'); Privat.offen = false; Krypto.key = null;
 
   await schritt('util', async () => {
     gleich(U.zahl('1.234,5'), 1234.5, 'Zahl mit Tausenderpunkt');
@@ -112,6 +113,126 @@
     Einst.del('pin');
   });
 
+  await schritt('krypto', async () => {
+    const key = await Krypto.ableiten('4711', Krypto.neuesSalz());
+    const s = await Krypto.encMit(key, { a: 'Grüße', n: 3 });
+    gleich(await Krypto.decMit(key, s), { a: 'Grüße', n: 3 }, 'Verschlüsseln und Entschlüsseln');
+    const falsch = await Krypto.ableiten('4712', Krypto.neuesSalz());
+    let f = null; try { await Krypto.decMit(falsch, s); } catch (e) { f = e; }
+    pruefe(!!f, 'Falscher Schlüssel kann nicht entschlüsseln');
+    const b = new Uint8Array([9, 8, 7, 0, 255]);
+    gleich([...(await Krypto.entBytesMit(key, await Krypto.bytesMit(key, b)))], [9, 8, 7, 0, 255], 'Bytes verschlüsseln');
+  });
+
+  await schritt('cloud', async () => {
+    const MOCK = 'http://localhost:8141';
+    let da = false; try { da = (await fetch(MOCK + '/__test/reset')).ok; } catch (e) { /* Nachbau läuft nicht */ }
+    if (!da) { t.uebersprungen.push('Cloud-Sync (Nachbau auf Port 8141 nicht gestartet: py tools/mock_supabase.py)'); return; }
+    Sync.test = { url: MOCK, key: 'test' };
+    const syncen = async () => { for (let i = 0; i < 100 && Sync.status.laeuft; i++) await warte(20); const ok = await Sync.sync(); pruefe(ok || !Sync.status.fehler, 'Sync ohne Fehler: ' + Sync.status.fehler); };
+    const dump = async () => (await fetch(MOCK + '/__test/dump')).json();
+    const neuesGeraet = async () => { await Data.alleLoeschen(); Einst.del('pin'); Einst.del('sync'); Krypto.key = null; Privat.offen = false; };
+    try {
+      await Data.alleLoeschen(); Einst.del('pin'); Einst.del('sync'); Krypto.key = null; Privat.offen = false;
+
+      // Daten vor der Anmeldung (wie ein Nutzer mit schon vorhandenen Pflanzen)
+      const z1 = Data.neuePflanze('zimmer', { name: 'Cloud-Monty', giessTage: 7 }); await Data.savePlant(z1);
+      const f1 = await Data.addFoto(await bildDatei('#2a6'));
+      const e1 = Data.neuerEintrag(z1.id, 'foto', { fotos: [f1], text: 'Zimmer-Eintrag' }); await Data.saveEntry(e1);
+      await Privat.setzen('987654');
+      const g1 = Data.neuePflanze('cannabis', { name: 'Grow-Geheim' }); await Data.savePlant(g1);
+      const f2 = await Data.addFoto(await bildDatei('#a62'));
+      const ge1 = Data.neuerEintrag(g1.id, 'notiz', { text: 'Geheimnotiz', fotos: [f2] }); await Data.saveEntry(ge1);
+      await Data.wunschSetzen('lithops', true);
+
+      // Anmelden
+      let fehler = null; try { await Sync.anmelden('a@b.de', 'falsch1234'); } catch (e) { fehler = e; }
+      pruefe(!!fehler && /stimmt nicht/.test(fehler.message), 'Falsche Anmeldung wird abgelehnt');
+      gleich(await Sync.registrieren('a@b.de', 'geheim1234'), 'angemeldet', 'Registrieren');
+      let doppelt = null; try { await Sync.registrieren('a@b.de', 'geheim1234'); } catch (e) { doppelt = e; }
+      pruefe(!!doppelt && /schon ein Konto/.test(doppelt.message), 'Doppelte Registrierung wird erklärt');
+      pruefe(Sync.angemeldet(), 'Angemeldet');
+      await syncen();
+
+      let d = await dump(); const txt = JSON.stringify(d.docs);
+      gleich(d.docs.filter((x) => !x.deleted).length, 6, 'Erster Abgleich lädt 2 Pflanzen, 2 Einträge, Wunschliste und PIN-Daten hoch');
+      pruefe(!txt.includes('Grow-Geheim') && !txt.includes('Geheimnotiz'), 'Privater Bereich liegt nur verschlüsselt in der Cloud');
+      pruefe(txt.includes('Cloud-Monty'), 'Normale Daten liegen lesbar in der Cloud');
+      pruefe(d.objs.includes('u1/' + f1 + '.jpg') && d.objs.includes('u1/' + f2 + '.enc') && !d.objs.includes('u1/' + f2 + '.jpg'), 'Fotos hochgeladen, privates verschlüsselt (.enc)');
+      gleich(await Sync.offen(), 0, 'Warteschlange leer nach Abgleich');
+
+      // Weitere Änderung nach der Anmeldung
+      const z2 = Data.neuePflanze('zimmer', { name: 'Nachher-Pflanze' }); await Data.savePlant(z2);
+      await syncen();
+      d = await dump();
+      pruefe(d.docs.some((x) => x.id === z2.id && !x.deleted), 'Neue Pflanze nach der Anmeldung wird hochgeladen');
+
+      // Neues Gerät: alles weg, wieder anmelden
+      await neuesGeraet();
+      gleich(Data.plants.size, 0, 'Gerät ist leer');
+      await Sync.anmelden('a@b.de', 'geheim1234');
+      await syncen();
+      pruefe(Data.plants.has(z1.id) && Data.plants.has(z2.id), 'Pflanzen kommen aus der Cloud zurück');
+      gleich(Data.plants.get(z1.id).name, 'Cloud-Monty', 'Inhalt unverändert');
+      pruefe(Data.entries.has(e1.id), 'Eintrag kommt zurück');
+      pruefe(Data.wunsch().includes('lithops'), 'Wunschliste kommt zurück');
+      pruefe(!!(await Data.url(f1, true)), 'Foto wird beim Ansehen aus der Cloud geladen');
+      gleich(Data.liste('cannabis').length, 0, 'Privater Bereich bleibt gesperrt (nichts sichtbar)');
+      pruefe(Privat.aktiv(), 'PIN-Einrichtung kommt aus der Cloud');
+      pruefe(!(await Privat.pruefen('111111')), 'Falsche PIN auf dem neuen Gerät');
+      pruefe(await Privat.pruefen('987654'), 'Richtige PIN auf dem neuen Gerät');
+      await Sync.nachEntsperren();
+      pruefe(Data.plants.has(g1.id) && Data.plants.get(g1.id).name === 'Grow-Geheim', 'Privater Bereich wird nach Entsperren entschlüsselt');
+      gleich(Data.entries.get(ge1.id) && Data.entries.get(ge1.id).text, 'Geheimnotiz', 'Privater Eintrag lesbar');
+      pruefe(!!(await Data.url(f2, true)), 'Privates Foto wird entschlüsselt geladen');
+
+      // Neueres gewinnt
+      const tok = await Sync.token();
+      const rem = Object.assign({}, Data.plants.get(z1.id), { name: 'Remote-Name', u: Date.now() + 5000 });
+      await fetch(MOCK + '/rest/v1/docs?on_conflict=user_id,kind,id', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, apikey: 'test', 'content-type': 'application/json' }, body: JSON.stringify([{ user_id: 'u1', kind: 'plant', id: z1.id, data: rem, u: rem.u, deleted: false }]) });
+      await syncen();
+      gleich(Data.plants.get(z1.id).name, 'Remote-Name', 'Neuere Änderung aus der Cloud gewinnt');
+      const lokal = Data.plants.get(z2.id); lokal.name = 'Lokal-Neu'; await Data.savePlant(lokal);
+      await fetch(MOCK + '/rest/v1/docs?on_conflict=user_id,kind,id', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, apikey: 'test', 'content-type': 'application/json' }, body: JSON.stringify([{ user_id: 'u1', kind: 'plant', id: z2.id, data: Object.assign({}, lokal, { name: 'Alt' }), u: 5, deleted: false }]) });
+      await syncen();
+      gleich(Data.plants.get(z2.id).name, 'Lokal-Neu', 'Ältere Cloud-Version überschreibt nichts');
+
+      // Löschen
+      await Data.delEntry(e1.id);
+      await syncen();
+      d = await dump();
+      pruefe(d.docs.some((x) => x.id === e1.id && x.deleted), 'Gelöschter Eintrag wird als gelöscht markiert');
+      pruefe(!d.objs.includes('u1/' + f1 + '.jpg'), 'Foto des gelöschten Eintrags wird aus der Cloud entfernt');
+      await neuesGeraet();
+      await Sync.anmelden('a@b.de', 'geheim1234'); await syncen();
+      pruefe(!Data.entries.has(e1.id) && Data.plants.has(z1.id), 'Auf dem neuen Gerät fehlt der gelöschte Eintrag, die Pflanze bleibt');
+
+      // Sitzung erneuern
+      await fetch(MOCK + '/__test/expire');
+      const z3 = Data.neuePflanze('zimmer', { name: 'Nach-Ablauf' }); await Data.savePlant(z3);
+      await syncen();
+      d = await dump();
+      pruefe(d.docs.some((x) => x.id === z3.id), 'Abgelaufene Sitzung wird automatisch erneuert');
+
+      // PIN ändern: privater Bereich wird neu verschlüsselt hochgeladen
+      await Privat.pruefen('987654'); await Sync.nachEntsperren();
+      pruefe(Data.plants.has(g1.id), 'Entsperrt: privater Bereich da');
+      const vorher = (await dump()).docs.find((x) => x.id === g1.id).data._enc;
+      await Privat.setzen('55556666');
+      await syncen();
+      const nachher = (await dump()).docs.find((x) => x.id === g1.id).data._enc;
+      pruefe(vorher !== nachher, 'Nach PIN-Änderung neu verschlüsselt hochgeladen');
+
+      // Abmelden
+      await Sync.abmelden();
+      pruefe(!Sync.angemeldet(), 'Abmelden');
+      pruefe(Data.plants.has(z1.id), 'Daten bleiben nach Abmelden im Gerät');
+    } finally {
+      Sync.test = null; Einst.del('sync'); Einst.del('pin'); Krypto.key = null; Privat.offen = false;
+      await Data.alleLoeschen(); await Data.savePlant(p);   // Zustand für die folgenden Schritte
+    }
+  });
+
   await schritt('seiten', async () => {
     for (const id of ['heute', 'sammlung', 'lexikon', 'wissen', 'mehr']) {
       App.tab(id); await warte(30);
@@ -178,12 +299,14 @@
     await Sicherung.einspielen(meineDaten, 'ersetzen');
     for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('gruen.')) localStorage.removeItem(k); }
     for (const k in meineEinst) localStorage.setItem(k, meineEinst[k]);
+    // war ein Konto angemeldet: beim nächsten Abgleich alles neu vergleichen (die Warteschlange wurde geleert)
+    if (meineEinst['gruen.sync']) { const c = JSON.parse(meineEinst['gruen.sync']); c.cursor = null; localStorage.setItem('gruen.sync', JSON.stringify(c)); }
     Privat.offen = false;
     App.tab('heute');
   });
   if (fehlerAlt.length) t.errors.push('Fehler im Fenster: ' + fehlerAlt.join(' | '));
 
-  t.zusammenfassung = t.ok + ' Prüfungen ok, ' + t.fails.length + ' fehlgeschlagen, ' + t.errors.length + ' Fehler';
+  t.zusammenfassung = t.ok + ' Prüfungen ok, ' + t.fails.length + ' fehlgeschlagen, ' + t.errors.length + ' Fehler' + (t.uebersprungen.length ? ', übersprungen: ' + t.uebersprungen.join('; ') : '');
   window.gruenTest = t;
   console.log('[selftest]', t.zusammenfassung, t.fails, t.errors);
   const box = document.createElement('pre');
