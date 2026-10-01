@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<!-- GRUENZEUG – gebaut 01.10.2026, 23:40. Nicht direkt öffnen: py tools/build.py setzt CSS, Code und Inhalte ein und schreibt dist/index.html -->
+<!-- GRUENZEUG – gebaut 02.10.2026, 00:29. Nicht direkt öffnen: py tools/build.py setzt CSS, Code und Inhalte ein und schreibt dist/index.html -->
 <html lang="de">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#f3efe6" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#141a16" media="(prefers-color-scheme: dark)">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-kQtlRGBhFihPUZMbl1qCESUOhi6/NkZhkutFX5zHaO0=' 'sha256-4ii6o2n/GxlyOIGr1Z9VKSYtmaUvDgIqCdh6OZsUvLY=' 'sha256-eqAYl/u+in9aAMXoxgShiSwQF4fO+J6XQMcWEdBxyps=' 'sha256-lxJcJ2F8krONszonlAM7PgsvJ1kObSkaqo0kfRc9TEE=' 'sha256-tB2mCu2yC3T1rZnBYeFRsc3kwC2KZRAOiqVt2nI3xt0=' 'sha256-5B+d3i+HVxhfm0RJxApX9hzxUFcX90J3wQj6wrgCj9E=' 'sha256-IC/oNKc+V8iFbOQ69yrFF5cy23etGhAaVh7ax2+XQU8=' 'sha256-KrN65H1bmkG5FGxrLjpbArCzzFAfF6wmQLuJdmcS1Mw=' 'sha256-p45+rJX2OYlchyC7NRPF/BUQf0rhXH5pVEc9Ajw1gac=' 'sha256-KKyt6F5s7reRJBNQy2fIwvfrNP6uNnu8GP7hrshZElA=' 'sha256-XlpfGmYVTWxwajAG1Hh9fhMjUXpmsKSywGNY9Gp1S+A=' 'sha256-PupwHpFx3AjbKB8QWXYOyurc+MO1QSS0dlTWVqkj/YI=' 'sha256-Mw5ihiJe4gEmbnYTQWGdq9HD9uTYNUu5YwzDwMQX50E=' 'sha256-LvNc+VQENrecO8vhh1VVp29XXpdhNL/3nQP8Y3a22uQ=' 'sha256-YzXXSKW5TOM5LqBlHindkQJpEPKTz/7wlbLwlCSB33E=' 'sha256-HVl193Klj1KiskjWf/RlBlYW6JJfpsfqs4oktr5BLiI=' 'sha256-7TEGng+nW2btML+ndYHl17eZhbBSItPWR+8BT0yB8ZI=' 'sha256-ZZc3EDIbTikRHIO71sVkiiAMZuhwAMIX9Y6xgkbWxwY=' 'sha256-alzJ0qkzNfhh4UfhjWVChgyruBwPvMXU2ctHGH5mvRc=' 'sha256-SpJe27uw+1QpX6GcntpDAKSu9vPspIZaqjSKBAzdM08=' 'sha256-UFlnYqr1iyRoVUWMmlcV1I2kBAqV+epALgImPScB5D0=' 'sha256-fsZmI0VLPghyQbjaVtUkC8MjxkOKNCm1RR1ZeJ7is2c=' 'sha256-C08NxCbSSgkDZuzSq4LbSlPLmoTz7TeBnRFj6npR5Kc=' 'sha256-ZbbqUt/WXdLPuxv1MBPI1ufPXYIRB9Co873aB/Y90f4=' 'sha256-J0wYQwTASl2BbEy23wehzYs1+x7v5Ytmg9nRPMKjSpY='; style-src 'self' 'sha256-N2OnoUwZj7XwvJzw79cmmTRn+vYzn+VyxmYb6q7iOwI='; style-src-attr 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" id="themeColor" content="#f2eee4">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Gruenzeug">
@@ -16,9 +17,23 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <script>
+/* Design früh setzen (vor dem ersten Zeichnen, kein Aufblitzen) – die volle Logik steht in js/design.js */
+(function () {
+  try {
+    var d = JSON.parse(localStorage.getItem('gruen.design') || '{}'), r = document.documentElement;
+    if (d.theme && d.theme !== 'feld') r.setAttribute('data-theme', d.theme);
+    if (d.ecken && d.ecken !== 'rund') r.setAttribute('data-ecken', d.ecken);
+    if (d.schrift && d.schrift !== 'buch') r.setAttribute('data-schrift', d.schrift);
+    if (d.tabs && d.tabs !== 'klassisch') r.setAttribute('data-tabs', d.tabs);
+    if (d.modus === 'dunkel' || ((!d.modus || d.modus === 'auto') && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)) r.setAttribute('data-mode', 'dark');
+  } catch (e) { /* Standard */ }
+})();
+  </script>
   <style>
 /* GRUENZEUG – Gestaltung: botanisches Feldbuch. Papierton, Moosgrün, Terrakotta, Serifen-Überschriften.
-   Nur Farben über Variablen. Hell/Dunkel folgt dem Gerät. Tippflächen ≥ 44 px, Eingaben 16 px (sonst zoomt iOS). */
+   Nur Farben über Variablen. Themes, Hell/Dunkel, Akzentfarbe, Ecken, Schrift und Tab-Leiste stellt der Nutzer in
+   Mehr → Design ein (js/design.js setzt data-Attribute auf <html>). Tippflächen ≥ 44 px, Eingaben 16 px (sonst zoomt iOS). */
 :root {
   --bg: #f2eee4; --card: #fbf9f3; --card2: #f5f1e6; --ink: #1e2a22; --muted: #66716a; --line: #dcd5c3;
   --accent: #2f5a3d; --on-accent: #fbf9f3; --accent-text: #2f5a3d; --accent-bg: #e1ebdf;
@@ -26,19 +41,39 @@
   --shadow: 0 1px 2px rgba(30, 42, 34, .06), 0 8px 24px rgba(30, 42, 34, .07);
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --tab-h: 60px;
+  --r1: 16px; --r2: 14px; --r3: 12px; --rb: 14px; --rc: 999px;           /* Ecken: Karten, Knöpfe/Felder, kleine Felder, Knopf */
+  --tab-h: 56px; --tab-pad: max(calc(var(--sb) - 10px), 6px); --tab-platz: 0px;
   --sb: env(safe-area-inset-bottom, 0px); --st: env(safe-area-inset-top, 0px);
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121912; --card: #1a231c; --card2: #202b23; --ink: #e8eadf; --muted: #98a399; --line: #2c392f;
-    --accent: #86bb92; --on-accent: #0f1912; --accent-text: #98cba3; --accent-bg: #223427;
-    --clay: #e8906a; --clay-bg: #3b2820; --sun: #dcb04a; --sun-bg: #38301a; --danger: #ef8c7e; --danger-bg: #3d2420;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
-    color-scheme: dark;
-  }
+:root[data-mode="dark"] {
+  --bg: #121912; --card: #1a231c; --card2: #202b23; --ink: #e8eadf; --muted: #98a399; --line: #2c392f;
+  --accent: #86bb92; --on-accent: #0f1912; --accent-text: #98cba3; --accent-bg: #223427;
+  --clay: #e8906a; --clay-bg: #3b2820; --sun: #dcb04a; --sun-bg: #38301a; --danger: #ef8c7e; --danger-bg: #3d2420;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  color-scheme: dark;
 }
+
+/* Themes (Hell- und Dunkelfassung je Theme) */
+:root[data-theme="dschungel"] { --bg: #e6f2ea; --card: #f5fbf7; --card2: #dcece2; --ink: #0f2a1c; --muted: #4f6e5d; --line: #c3dccb; --accent: #0f7a47; --on-accent: #fff; --accent-text: #0b6a3c; --accent-bg: #cdebd8; --clay: #c2570f; --clay-bg: #fbe3cc; --sun: #9a7a0a; --sun-bg: #f3ecc8; --danger: #b3261e; --danger-bg: #f7d9d5; }
+:root[data-theme="dschungel"][data-mode="dark"] { --bg: #0b1a14; --card: #12261d; --card2: #183126; --ink: #e3f1e6; --muted: #8fb09b; --line: #24402f; --accent: #4fd08a; --on-accent: #04170c; --accent-text: #6fe0a1; --accent-bg: #143826; --clay: #ffb15c; --clay-bg: #3a2a14; --sun: #f1d15a; --sun-bg: #35300f; --danger: #ff8a7a; --danger-bg: #3d2220; }
+:root[data-theme="bluete"] { --bg: #fbf0f1; --card: #fffafa; --card2: #f7e6e8; --ink: #3a2230; --muted: #85707a; --line: #ecd3d8; --accent: #a63d62; --on-accent: #fff; --accent-text: #a63d62; --accent-bg: #f6dce4; --clay: #d9663f; --clay-bg: #fbe2d6; --sun: #b5851c; --sun-bg: #f6ecd0; --danger: #b3261e; --danger-bg: #f8dad6; }
+:root[data-theme="bluete"][data-mode="dark"] { --bg: #1d1318; --card: #271a21; --card2: #31212a; --ink: #f5e6ea; --muted: #b79aa5; --line: #43303a; --accent: #f08aab; --on-accent: #2b0d19; --accent-text: #f4a3bd; --accent-bg: #3d2230; --clay: #f3a07c; --clay-bg: #432a22; --sun: #e5c070; --sun-bg: #3a3118; --danger: #ff9d8f; --danger-bg: #432522; }
+:root[data-theme="ozean"] { --bg: #eaf1f6; --card: #f8fbfd; --card2: #deeaf1; --ink: #12283a; --muted: #5c7487; --line: #c9dbe6; --accent: #1f6f9c; --on-accent: #fff; --accent-text: #1a6290; --accent-bg: #d3e7f2; --clay: #e07a3a; --clay-bg: #fbe6d6; --sun: #b08a1f; --sun-bg: #f4edcf; --danger: #b3261e; --danger-bg: #f7dad6; }
+:root[data-theme="ozean"][data-mode="dark"] { --bg: #0d1822; --card: #14232f; --card2: #1b2e3c; --ink: #e4eef5; --muted: #8fa8ba; --line: #26394a; --accent: #5db4e6; --on-accent: #06202f; --accent-text: #7cc6f0; --accent-bg: #173449; --clay: #f0a265; --clay-bg: #3a2a1a; --sun: #e0c060; --sun-bg: #35301a; --danger: #ff9a8c; --danger-bg: #3e2421; }
+:root[data-theme="tinte"] { --bg: #f4f4f2; --card: #fff; --card2: #ececea; --ink: #111; --muted: #6b6b6b; --line: #dcdcd8; --accent: #111; --on-accent: #fff; --accent-text: #111; --accent-bg: #e6e6e2; --clay: #d4451a; --clay-bg: #fbe1d8; --sun: #9a7b00; --sun-bg: #f1ead0; --danger: #c0261c; --danger-bg: #f7dad6; }
+:root[data-theme="tinte"][data-mode="dark"] { --bg: #000; --card: #111; --card2: #1b1b1b; --ink: #f2f2f2; --muted: #9a9a9a; --line: #2a2a2a; --accent: #f2f2f2; --on-accent: #000; --accent-text: #fff; --accent-bg: #232323; --clay: #ff7a4d; --clay-bg: #2d1b14; --sun: #e2c34a; --sun-bg: #2b2610; --danger: #ff8a7e; --danger-bg: #3a1f1c; }
+
+/* Ecken, Schrift, Tab-Leiste */
+:root[data-ecken="weich"] { --r1: 26px; --r2: 20px; --r3: 16px; --rb: 999px; }
+:root[data-ecken="kantig"] { --r1: 6px; --r2: 4px; --r3: 3px; --rb: 4px; --rc: 5px; }
+:root[data-schrift="sans"] { --serif: var(--sans); }
+:root[data-schrift="sans"] h1, :root[data-schrift="sans"] h2, :root[data-schrift="sans"] h3 { font-weight: 700; letter-spacing: -.02em; }
+:root[data-schrift="rund"] { --serif: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Nunito", var(--sans); --sans: ui-rounded, "SF Pro Rounded", -apple-system, "Segoe UI", Roboto, sans-serif; }
+:root[data-schrift="mono"] { --serif: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+:root[data-schrift="mono"] h1, :root[data-schrift="mono"] h2, :root[data-schrift="mono"] h3 { letter-spacing: -.04em; font-weight: 700; }
+:root[data-tabs="schwebend"] { --tab-platz: calc(var(--tab-h) + var(--sb) + 26px); }
+:root[data-tabs="kompakt"] { --tab-h: 46px; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 16px/1.45 var(--sans); -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
 body { overflow: hidden; -webkit-font-smoothing: antialiased; }
@@ -53,7 +88,7 @@ a { color: var(--accent-text); }
 .verb { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 /* ---------- Gerüst ---------- */
-#app { position: fixed; inset: 0; display: flex; flex-direction: column; }
+#app { position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
 .stack { position: relative; flex: 1; min-height: 0; }
 .page { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
 .page.rein { animation: rein .22s ease-out; }
@@ -69,14 +104,22 @@ a { color: var(--accent-text); }
 .ib svg { width: 24px; height: 24px; }
 .body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 14px 32px; }
 .fab ~ .body, .page:has(.fab) .body { padding-bottom: 100px; }
-.tabbar { display: flex; background: color-mix(in srgb, var(--card) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); padding-bottom: var(--sb); position: relative; z-index: 5; }
-.tabbar button { flex: 1; height: var(--tab-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; position: relative; }
+.tabbar { display: flex; background: color-mix(in srgb, var(--card) 90%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--line); padding-bottom: var(--tab-pad); position: relative; z-index: 5; flex: none; }
+.tabbar button { flex: 1; height: var(--tab-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .02em; position: relative; min-width: 0; }
 .tabbar button svg { width: 25px; height: 25px; }
 .tabbar button.on { color: var(--accent-text); }
 .tabbar button.on::before { content: ""; position: absolute; top: 0; width: 26px; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent-text); }
+:root[data-tabs="kompakt"] .tabbar button { font-size: 0; gap: 0; }
+:root[data-tabs="kompakt"] .tabbar button svg { width: 26px; height: 26px; }
+:root[data-tabs="schwebend"] .tabbar { position: absolute; left: 12px; right: 12px; bottom: max(calc(var(--sb) - 6px), 12px); padding: 0; border: 1px solid var(--line); border-radius: min(30px, calc(var(--r1) + 10px)); box-shadow: var(--shadow); overflow: hidden; }
+:root[data-tabs="schwebend"] .tabbar button.on::before { top: auto; bottom: 0; border-radius: 3px 3px 0 0; }
+:root[data-tabs="schwebend"] .body { padding-bottom: var(--tab-platz); }
+:root[data-tabs="schwebend"] .toast { bottom: calc(var(--tab-platz) + 8px); }
+:root[data-tabs="schwebend"] .fab { bottom: calc(var(--tab-platz) - 6px); }
+:root[data-tabs="schwebend"] .page:has(.fab) .body { padding-bottom: calc(var(--tab-platz) + 70px); }
 
 /* ---------- Bausteine ---------- */
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r1); padding: 14px; margin-bottom: 12px; }
 .card.flach { padding: 0; overflow: hidden; }
 .card h3 { font-size: 18px; margin-bottom: 8px; }
 .abschnitt { margin: 22px 2px 10px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -93,9 +136,9 @@ a { color: var(--accent-text); }
 .zeile .pfeil { width: 18px; height: 18px; color: var(--muted); opacity: .6; }
 .chips { display: flex; gap: 8px; overflow-x: auto; padding: 4px 14px 10px; margin: 0 -14px; scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
-.chip { flex: none; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; min-height: 38px; }
+.chip { flex: none; padding: 8px 14px; border-radius: var(--rc); border: 1px solid var(--line); background: var(--card); font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; min-height: 38px; }
 .chip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.pille { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; background: var(--accent-bg); color: var(--accent-text); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.pille { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: var(--rc); background: var(--accent-bg); color: var(--accent-text); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .pille.clay { background: var(--clay-bg); color: var(--clay); }
 .pille.sun { background: var(--sun-bg); color: var(--sun); }
 .pille.rot { background: var(--danger-bg); color: var(--danger); }
@@ -109,38 +152,38 @@ a { color: var(--accent-text); }
 .leer svg { width: 54px; height: 54px; color: var(--accent-text); opacity: .85; margin-bottom: 8px; }
 .leer h3 { color: var(--ink); margin-bottom: 6px; }
 .suche { position: relative; margin: 6px 0 8px; }
-.suche input { width: 100%; height: 46px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); padding: 0 14px 0 44px; font-size: 16px; outline: none; }
+.suche input { width: 100%; height: 46px; border-radius: var(--r2); border: 1px solid var(--line); background: var(--card); padding: 0 14px 0 44px; font-size: 16px; outline: none; }
 .suche input:focus { border-color: var(--accent); }
 .suche svg { position: absolute; left: 13px; top: 12px; width: 22px; height: 22px; color: var(--muted); }
 
 /* Knöpfe */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 16px; }
+.btn { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: var(--rb); background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 16px; }
 .btn:active { filter: brightness(.92); transform: translateY(1px); }
 .btn.sekundaer { background: var(--accent-bg); color: var(--accent-text); }
 .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
 .btn.clay { background: var(--clay); color: #fff; }
 .btn.gefahr { background: var(--danger-bg); color: var(--danger); }
 .btn.voll { width: 100%; }
-.btn.klein { min-height: 38px; padding: 0 14px; font-size: 14px; border-radius: 12px; }
+.btn.klein { min-height: 38px; padding: 0 14px; font-size: 14px; border-radius: var(--rb); }
 .btn[disabled] { opacity: .5; pointer-events: none; }
 .btn svg { width: 20px; height: 20px; }
 .btnreihe { display: flex; gap: 8px; flex-wrap: wrap; }
 .btnreihe .btn { flex: 1; }
-.fab { position: absolute; right: 16px; bottom: 16px; width: 58px; height: 58px; border-radius: 20px; background: var(--clay); color: #fff; display: grid; place-items: center; box-shadow: var(--shadow); z-index: 4; }
+.fab { position: absolute; right: 16px; bottom: 16px; width: 58px; height: 58px; border-radius: min(20px, var(--r1)); background: var(--clay); color: #fff; display: grid; place-items: center; box-shadow: var(--shadow); z-index: 4; }
 .fab svg { width: 28px; height: 28px; }
 .fab:active { transform: scale(.95); }
 
 /* ---------- Pflanzenkacheln ---------- */
-.gitter { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.gitter { display: grid; grid-template-columns: repeat(var(--spalten, 2), 1fr); gap: 12px; }
 @media (min-width: 640px) { .gitter { grid-template-columns: repeat(4, 1fr); } .body { max-width: 900px; margin: 0 auto; width: 100%; } }
-.kachel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; text-align: left; position: relative; display: block; width: 100%; }
+.kachel { background: var(--card); border: 1px solid var(--line); border-radius: var(--r1); overflow: hidden; text-align: left; position: relative; display: block; width: 100%; }
 .kachel:active { transform: scale(.98); }
 .kachel .bild, .kachel .ph { width: 100%; aspect-ratio: 1; display: block; object-fit: cover; }
 .kachel .info { padding: 9px 11px 11px; }
 .kachel .name { font-family: var(--serif); font-weight: 600; font-size: 17px; line-height: 1.2; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kachel .art { font-size: 13px; color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kachel .marke { position: absolute; top: 8px; left: 8px; }
-.kachel .herz { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 14px; background: rgba(0, 0, 0, .38); color: #fff; display: grid; place-items: center; }
+.kachel .herz { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: var(--r2); background: rgba(0, 0, 0, .38); color: #fff; display: grid; place-items: center; }
 .kachel .herz svg { width: 16px; height: 16px; fill: #fff; }
 .ph { background: var(--card2); display: grid; place-items: center; position: relative; overflow: hidden; }
 .ph svg { width: 46%; height: 46%; opacity: .5; }
@@ -149,13 +192,13 @@ a { color: var(--accent-text); }
 /* Gieß-Zeilen */
 .faellig { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .faellig:last-child { border-bottom: 0; }
-.faellig .thumb { width: 50px; height: 50px; border-radius: 12px; overflow: hidden; flex: none; }
+.faellig .thumb { width: 50px; height: 50px; border-radius: var(--r3); overflow: hidden; flex: none; }
 .faellig .thumb > * { width: 100%; height: 100%; object-fit: cover; display: block; }
 .faellig .t { flex: 1; min-width: 0; text-align: left; }
 .faellig .t b { display: block; font-family: var(--serif); font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .faellig .t span { font-size: 13px; color: var(--muted); }
 .faellig .t span.ueber { color: var(--clay); font-weight: 700; }
-.tropf { width: 46px; height: 46px; border-radius: 15px; background: var(--accent-bg); color: var(--accent-text); display: grid; place-items: center; flex: none; }
+.tropf { width: 46px; height: 46px; border-radius: var(--r2); background: var(--accent-bg); color: var(--accent-text); display: grid; place-items: center; flex: none; }
 .tropf svg { width: 24px; height: 24px; }
 .tropf:active { background: var(--accent); color: var(--on-accent); }
 .tropf.fertig { background: var(--accent); color: var(--on-accent); }
@@ -171,11 +214,11 @@ a { color: var(--accent-text); }
 .kopf h1 { font-size: 30px; line-height: 1.1; }
 .kopf .latein { color: var(--muted); font-size: 16px; margin-top: 2px; }
 .schnell { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 6px; }
-.schnell button { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; min-height: 68px; }
+.schnell button { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; min-height: 68px; }
 .schnell button svg { width: 24px; height: 24px; color: var(--accent-text); }
 .schnell button:active { background: var(--card2); }
 .schnell button.klar svg { color: var(--clay); }
-.fakten { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+.fakten { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-radius: var(--r2); overflow: hidden; border: 1px solid var(--line); }
 .fakten > div { background: var(--card); padding: 10px 12px; min-width: 0; }
 .fakten > div.breit { grid-column: 1 / -1; }
 .fakten dt { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 0 2px; }
@@ -199,7 +242,7 @@ a { color: var(--accent-text); }
 .monat { font-family: var(--serif); font-size: 15px; color: var(--muted); margin: 6px 0 12px -26px; padding-left: 26px; font-style: italic; }
 
 /* Vorher/Nachher */
-.vn { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--card2); touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.vn { position: relative; border-radius: var(--r2); overflow: hidden; aspect-ratio: 4 / 3; background: var(--card2); touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .vn img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .vn .oben { clip-path: inset(0 50% 0 0); }
 .vn .griff { position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; background: #fff; margin-left: -1.5px; box-shadow: 0 0 6px rgba(0, 0, 0, .4); pointer-events: none; }
@@ -218,7 +261,7 @@ a { color: var(--accent-text); }
 /* ---------- Formulare, Sheets ---------- */
 .feld { margin-bottom: 14px; }
 .feld > label, .feld > .lbl { display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 2px 5px; }
-.feld input, .feld select, .feld textarea { width: 100%; min-height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--card2); padding: 10px 13px; font-size: 16px; outline: none; appearance: none; -webkit-appearance: none; }
+.feld input, .feld select, .feld textarea { width: 100%; min-height: 46px; border-radius: var(--r3); border: 1px solid var(--line); background: var(--card2); padding: 10px 13px; font-size: 16px; outline: none; appearance: none; -webkit-appearance: none; }
 .feld input[type=date] { min-height: 46px; }
 .feld textarea { min-height: 96px; resize: vertical; line-height: 1.4; }
 .feld input:focus, .feld select:focus, .feld textarea:focus { border-color: var(--accent); background: var(--card); }
@@ -227,14 +270,14 @@ a { color: var(--accent-text); }
 .zwei { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .drei { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .hinweis { font-size: 13.5px; color: var(--muted); margin: 6px 2px 0; }
-.box { border-radius: 14px; padding: 12px 14px; background: var(--accent-bg); color: var(--ink); font-size: 14.5px; margin-bottom: 12px; }
+.box { border-radius: var(--r2); padding: 12px 14px; background: var(--accent-bg); color: var(--ink); font-size: 14.5px; margin-bottom: 12px; }
 .box.warn { background: var(--sun-bg); }
 .box.rot { background: var(--danger-bg); }
 .box b { display: block; margin-bottom: 2px; }
 .box p:last-child { margin-bottom: 0; }
 .schalter { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; width: 100%; text-align: left; min-height: 54px; }
 .schalter .t { flex: 1; } .schalter .t b { display: block; font-weight: 600; } .schalter .t span { font-size: 13.5px; color: var(--muted); }
-.sw { width: 50px; height: 30px; border-radius: 15px; background: var(--line); position: relative; flex: none; transition: background .15s; }
+.sw { width: 50px; height: 30px; border-radius: var(--r2); background: var(--line); position: relative; flex: none; transition: background .15s; }
 .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .15s; }
 .sw.an { background: var(--accent); } .sw.an::after { transform: translateX(20px); }
 
@@ -249,25 +292,25 @@ a { color: var(--accent-text); }
 .sheet .fuss { padding: 10px 18px 14px; display: flex; gap: 10px; border-top: 1px solid var(--line); flex: none; }
 .sheet .fuss .btn { flex: 1; }
 .typen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.typen button { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; text-align: center; min-height: 82px; }
+.typen button { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); padding: 14px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; text-align: center; min-height: 82px; }
 .typen button svg { width: 26px; height: 26px; color: var(--accent-text); }
 .typen button:active { background: var(--card2); }
 .fotoleiste { display: flex; gap: 8px; flex-wrap: wrap; }
-.fotoleiste .f { width: 76px; height: 76px; border-radius: 12px; overflow: hidden; position: relative; background: var(--card2); }
+.fotoleiste .f { width: 76px; height: 76px; border-radius: var(--r3); overflow: hidden; position: relative; background: var(--card2); }
 .fotoleiste .f img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.fotoleiste .f button { position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; border-radius: 12px; background: rgba(0, 0, 0, .6); color: #fff; display: grid; place-items: center; }
+.fotoleiste .f button { position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; border-radius: var(--r3); background: rgba(0, 0, 0, .6); color: #fff; display: grid; place-items: center; }
 .fotoleiste .f button svg { width: 14px; height: 14px; }
-.fotoleiste .neu { width: 76px; height: 76px; border-radius: 12px; border: 1.5px dashed var(--line); display: grid; place-items: center; color: var(--muted); }
+.fotoleiste .neu { width: 76px; height: 76px; border-radius: var(--r3); border: 1.5px dashed var(--line); display: grid; place-items: center; color: var(--muted); }
 .fotoleiste .neu svg { width: 26px; height: 26px; }
 .wahlliste { display: flex; flex-wrap: wrap; gap: 8px; }
-.treffer { border: 1px solid var(--line); border-radius: 12px; background: var(--card); margin-top: 6px; max-height: 220px; overflow-y: auto; }
+.treffer { border: 1px solid var(--line); border-radius: var(--r3); background: var(--card); margin-top: 6px; max-height: 220px; overflow-y: auto; }
 .treffer button { display: block; width: 100%; text-align: left; padding: 10px 13px; border-bottom: 1px solid var(--line); min-height: 44px; }
 .treffer button:last-child { border-bottom: 0; }
 .treffer button:active { background: var(--card2); }
 .treffer small { color: var(--muted); font-style: italic; margin-left: 6px; }
 
-.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + var(--sb) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 14px; font-size: 14.5px; font-weight: 600; z-index: 90; max-width: 88%; text-align: center; animation: ein .15s ease-out; box-shadow: var(--shadow); }
-.banner { display: flex; gap: 10px; align-items: center; background: var(--sun-bg); border-radius: 14px; padding: 10px 12px 10px 14px; margin-bottom: 12px; font-size: 14.5px; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + var(--tab-pad) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: var(--r2); font-size: 14.5px; font-weight: 600; z-index: 90; max-width: 88%; text-align: center; animation: ein .15s ease-out; box-shadow: var(--shadow); }
+.banner { display: flex; gap: 10px; align-items: center; background: var(--sun-bg); border-radius: var(--r2); padding: 10px 12px 10px 14px; margin-bottom: 12px; font-size: 14.5px; }
 .banner span { flex: 1; }
 
 /* Lupe */
@@ -283,7 +326,7 @@ a { color: var(--accent-text); }
 .lex { display: flex; gap: 12px; align-items: center; padding: 10px 12px; width: 100%; text-align: left; border-bottom: 1px solid var(--line); min-height: 72px; }
 .lex:last-child { border-bottom: 0; }
 .lex:active { background: var(--card2); }
-.lex .kachel-k { width: 52px; height: 52px; border-radius: 14px; flex: none; display: grid; place-items: center; position: relative; overflow: hidden; }
+.lex .kachel-k { width: 52px; height: 52px; border-radius: var(--r2); flex: none; display: grid; place-items: center; position: relative; overflow: hidden; }
 .lex .kachel-k svg { width: 28px; height: 28px; opacity: .85; }
 .lex .t { flex: 1; min-width: 0; }
 .lex .t b { font-family: var(--serif); font-size: 17px; font-weight: 600; display: block; line-height: 1.2; }
@@ -303,22 +346,22 @@ a { color: var(--accent-text); }
 .schritte li { counter-increment: s; position: relative; padding: 0 0 12px 40px; }
 .schritte li::before { content: counter(s); position: absolute; left: 0; top: -1px; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-bg); color: var(--accent-text); display: grid; place-items: center; font-weight: 800; font-size: 14px; }
 .prose p, .prose ul { margin: 0 0 .75em; } .prose ul { padding-left: 20px; } .prose li { margin-bottom: 4px; } .prose strong { font-weight: 700; }
-.segment { display: flex; background: var(--card2); border: 1px solid var(--line); border-radius: 13px; padding: 3px; margin: 6px 0 10px; }
+.segment { display: flex; background: var(--card2); border: 1px solid var(--line); border-radius: var(--r3); padding: 3px; margin: 6px 0 10px; }
 .segment button { flex: 1; min-height: 38px; border-radius: 10px; font-weight: 700; font-size: 14.5px; color: var(--muted); }
 .segment button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
-.tipp { background: var(--clay-bg); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; position: relative; overflow: hidden; }
+.tipp { background: var(--clay-bg); border-radius: var(--r1); padding: 14px 16px; margin-bottom: 12px; position: relative; overflow: hidden; }
 .tipp .etikett { color: var(--clay); }
 .tipp h3 { font-size: 19px; margin: 3px 0 4px; }
 .tipp p { margin: 0; font-size: 15px; }
 .stat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-.stat > div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.stat > div { background: var(--card); border: 1px solid var(--line); border-radius: var(--r2); padding: 10px 12px; }
 .stat b { display: block; font-family: var(--serif); font-size: 26px; line-height: 1.1; }
 .stat span { font-size: 12px; color: var(--muted); font-weight: 600; }
 .pin { display: flex; justify-content: center; gap: 14px; margin: 18px 0; }
 .pin i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--accent-text); }
 .pin i.an { background: var(--accent-text); }
 .ziffern { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 0 auto; }
-.ziffern button { height: 62px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); font-size: 24px; font-family: var(--serif); font-weight: 600; }
+.ziffern button { height: 62px; border-radius: var(--r1); background: var(--card); border: 1px solid var(--line); font-size: 24px; font-family: var(--serif); font-weight: 600; }
 .ziffern button:active { background: var(--card2); }
 .ziffern button.leer-t { visibility: hidden; }
 .sperre { text-align: center; padding: 30px 10px; }
@@ -331,12 +374,98 @@ a { color: var(--accent-text); }
 .phasen i.jetzt { background: var(--clay); }
 @media (prefers-reduced-motion: reduce) { .page.rein, .sheet, .sheet-bg, .toast, .lupe { animation: none; } .sw, .sw::after { transition: none; } }
 
+/* Design-Seite */
+.themen { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.thema { text-align: left; background: var(--card); border: 2px solid var(--line); border-radius: var(--r1); padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+.thema.an { border-color: var(--accent); }
+.thema .probe { height: 58px; border-radius: var(--r3); position: relative; margin-bottom: 8px; overflow: hidden; border: 1px solid rgba(128, 128, 128, .25); }
+.thema .probe i { position: absolute; left: 10px; right: 28px; top: 10px; bottom: -8px; border-radius: 8px; }
+.thema .probe b { position: absolute; right: 8px; top: 8px; width: 14px; height: 14px; border-radius: 50%; }
+.thema .n { font-family: var(--serif); font-weight: 600; font-size: 17px; }
+.thema .b { font-size: 12.5px; color: var(--muted); }
+.akzente { display: flex; flex-wrap: wrap; gap: 12px; padding: 4px 2px; }
+.akzent { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; border: 3px solid var(--bg); box-shadow: 0 0 0 1.5px var(--line); }
+.akzent.an { box-shadow: 0 0 0 3px var(--ink); }
+.akzent svg { width: 22px; height: 22px; }
+.hero .bsp-tag { position: absolute; left: 14px; bottom: 14px; background: rgba(0, 0, 0, .5); color: #fff; border-radius: var(--rc); padding: 4px 10px; font-size: 12px; font-weight: 600; backdrop-filter: blur(6px); }
+.lex .kachel-k img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lex .kachel-k .ph { width: 100%; height: 100%; }
+.lexhero.mitfoto { min-height: 300px; display: flex; flex-direction: column; justify-content: flex-end; padding-top: 120px; }
+.lexhero .lexfoto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lexhero .schleier { position: absolute; inset: 0; background: linear-gradient(rgba(0, 0, 0, .05) 25%, rgba(0, 0, 0, .78)); }
+.lexhero.mitfoto h1, .lexhero.mitfoto .latein, .lexhero.mitfoto .pillen { text-shadow: 0 1px 8px rgba(0, 0, 0, .35); }
+.lexhero.mitfoto .pille { background: rgba(0, 0, 0, .38); backdrop-filter: blur(6px); }
+.bildnachweis { margin: 6px 2px 0; line-height: 1.35; overflow-wrap: anywhere; }
+.bildnachweis a { color: inherit; }
+.kachel.lexk .info .art { font-style: normal; display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.kachel.lexk .punkte i { width: 7px; height: 7px; }
+
+/* Wochenstreifen, Serie, Abzeichen, Quiz, Tagespflanze */
+.woche { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.woche .tag { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 6px; border-radius: var(--r3); min-height: 74px; color: var(--muted); }
+.woche .tag.heute { background: var(--accent-bg); color: var(--accent-text); }
+.woche .tag .wt { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.woche .tag .dn { font-family: var(--serif); font-size: 19px; font-weight: 600; color: var(--ink); }
+.woche .tag .zl { display: flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; min-height: 18px; }
+.woche .tag.voll .zl { color: var(--accent-text); }
+.woche .tag .zl svg { width: 13px; height: 13px; }
+.serie { display: flex; gap: 14px; align-items: center; width: 100%; text-align: left; }
+.serie-zahl { text-align: center; min-width: 74px; }
+.serie-zahl b { display: block; font-family: var(--serif); font-size: 44px; line-height: 1; color: var(--clay); }
+.serie-zahl span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.serie-r { flex: 1; min-width: 0; }
+.serie-tage { display: flex; gap: 5px; margin: 6px 0 6px; }
+.serie-tage i { flex: 1; height: 26px; border-radius: var(--r3); background: var(--card2); border: 1px solid var(--line); display: grid; place-items: center; }
+.serie-tage i.an { background: var(--accent); border-color: var(--accent); }
+.serie-tage i span { font-size: 10px; font-style: normal; font-weight: 700; color: var(--muted); }
+.serie-tage i.an span { color: var(--on-accent); }
+.balken { height: 8px; border-radius: 4px; background: var(--card2); overflow: hidden; margin-top: 8px; }
+.balken i { display: block; height: 100%; background: var(--accent-text); border-radius: 4px; }
+.balken.klein { height: 5px; margin: 8px 0 2px; }
+.abzeichen { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.abz { background: var(--card); border: 1px solid var(--line); border-radius: var(--r1); padding: 12px; display: flex; flex-direction: column; gap: 2px; opacity: .72; }
+.abz.ok { opacity: 1; border-color: var(--accent); }
+.abz .sym { width: 40px; height: 40px; border-radius: 50%; background: var(--card2); color: var(--muted); display: grid; place-items: center; margin-bottom: 6px; }
+.abz.ok .sym { background: var(--accent); color: var(--on-accent); }
+.abz .sym svg { width: 22px; height: 22px; }
+.abz b { font-family: var(--serif); font-size: 16px; line-height: 1.2; }
+.quizbild { border-radius: var(--r1); overflow: hidden; background: var(--card2); aspect-ratio: 4 / 3.4; }
+.quizbild img, .quizbild .ph { width: 100%; height: 100%; object-fit: cover; display: block; }
+.quizopt { display: grid; gap: 8px; }
+.quizopt .btn { justify-content: flex-start; text-align: left; min-height: 50px; }
+.quizopt .btn.richtig { background: var(--accent); color: var(--on-accent); border-color: var(--accent); opacity: 1; }
+.quizopt .btn.falsch { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); opacity: 1; }
+.quizopt .btn.aus { opacity: .45; }
+.quizopt .btn[disabled] { pointer-events: none; }
+.quizkarte { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; }
+.quizkarte .sym { width: 44px; height: 44px; border-radius: var(--r2); background: var(--accent-bg); color: var(--accent-text); display: grid; place-items: center; flex: none; }
+.quizkarte .t { flex: 1; } .quizkarte .t b { display: block; font-family: var(--serif); font-size: 18px; }
+.quizkarte > svg { width: 18px; height: 18px; color: var(--muted); }
+.wusstest { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; }
+.wusstest .wb { width: 64px; height: 64px; border-radius: var(--r2); overflow: hidden; flex: none; background: var(--card2); }
+.wusstest .wb img, .wusstest .wb .ph { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wusstest .t { flex: 1; min-width: 0; } .wusstest p { margin: 3px 0 0; font-size: 15px; }
+.tagespflanze { position: relative; display: block; width: 100%; min-height: 190px; border-radius: var(--r1); overflow: hidden; text-align: left; color: #fff; margin-bottom: 12px; }
+.tagespflanze .tp-bild { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tagespflanze .schleier { position: absolute; inset: 0; background: linear-gradient(rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, .75)); }
+.tagespflanze .tp-text { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 16px; }
+.tagespflanze .etikett { color: rgba(255, 255, 255, .8); }
+.tagespflanze h3 { font-size: 24px; text-shadow: 0 1px 8px rgba(0, 0, 0, .4); }
+.tagespflanze .latein { opacity: .9; }
+.tagespflanze .pille { background: rgba(0, 0, 0, .4); color: #fff; margin-top: 8px; backdrop-filter: blur(6px); }
+.mini-thumb { width: 44px; height: 44px; border-radius: var(--r3); overflow: hidden; flex: none; background: var(--card2); }
+.mini-thumb img, .mini-thumb .ph { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wtog { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; }
+.wtog .t { flex: 1; min-width: 0; }
+.ib[disabled] { opacity: .3; pointer-events: none; }
+
   </style>
 </head>
 <body>
   <noscript>Gruenzeug braucht JavaScript.</noscript>
   <div id="app"></div>
-<script>const GRUEN_BUILD = {"id": "b7c2568-20261001234032", "stamp": "01.10.2026, 23:40", "commit": "b7c2568"};</script>
+<script>const GRUEN_BUILD = {"id": "2c96226-20261002002919", "stamp": "02.10.2026, 00:29", "commit": "2c96226"};</script>
+<script>const GRUEN_BILDER = {"alocasia-frydek":{"titel":"File:Alocasia micholitziana 'Frydek'.jpg","seite":"https://commons.wikimedia.org/wiki/File:Alocasia_micholitziana_%27Frydek%27.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/3.0","urheber":"James Steakley","w":720,"h":540,"v":"75dc3065"},"alocasia-polly":{"titel":"File:Alocasia x amazonica 'Polly'.jpg","seite":"https://commons.wikimedia.org/wiki/File:Alocasia_x_amazonica_%27Polly%27.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Tim Kortekamp","w":720,"h":1080,"v":"8f74e6e6"},"aloe-vera":{"titel":"File:Aloe vera in bloom (6246879009).jpg","seite":"https://commons.wikimedia.org/wiki/File:Aloe_vera_in_bloom_(6246879009).jpg","lizenz":"CC BY 2.0","lizenzUrl":"https://creativecommons.org/licenses/by/2.0","urheber":"Gorupka from Slovenia","w":640,"h":400,"v":"17619111"},"anthurium-clarinervium":{"titel":"File:Anthurium clarinervium.jpg","seite":"https://commons.wikimedia.org/wiki/File:Anthurium_clarinervium.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Nadiatalent","w":720,"h":576,"v":"068ddade"},"anthurium-crystallinum":{"titel":"File:Alismatales - Anthurium crystallinum 2.jpg","seite":"https://commons.wikimedia.org/wiki/File:Alismatales_-_Anthurium_crystallinum_2.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Emőke Dénes","w":720,"h":540,"v":"4228093b"},"anthurium-warocqueanum":{"titel":"File:L'Illustration horticole (Plate 392).jpg","seite":"https://commons.wikimedia.org/wiki/File:L%27Illustration_horticole_(Plate_392).jpg","lizenz":"Public domain","lizenzUrl":"","urheber":"Lemaire, Charles Antoine","w":720,"h":950,"v":"5b1e7f9b"},"begonia-maculata":{"titel":"File:Begonia maculata3073316230.jpg","seite":"https://commons.wikimedia.org/wiki/File:Begonia_maculata3073316230.jpg","lizenz":"CC BY 2.0","lizenzUrl":"https://creativecommons.org/licenses/by/2.0","urheber":"Cliff from I now live in Arlington, VA (Outside Washington DC), USA","w":720,"h":1080,"v":"63dd5063"},"bergpalme":{"titel":"File:Chamaedorea elegans.jpg","seite":"https://commons.wikimedia.org/wiki/File:Chamaedorea_elegans.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Tequila 13:54, 24 June 2007 (UTC)","w":720,"h":540,"v":"6dd2e2b1"},"bogenhanf":{"titel":"File:Dracaena Trifasciata Plant.jpg","seite":"https://commons.wikimedia.org/wiki/File:Dracaena_Trifasciata_Plant.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Fanti Salms","w":720,"h":1281,"v":"552d96d0"},"ceropegia-woodii":{"titel":"File:Ceropegia linearis ssp. woodii3.jpg","seite":"https://commons.wikimedia.org/wiki/File:Ceropegia_linearis_ssp._woodii3.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Engeser","w":720,"h":540,"v":"5458474e"},"efeutute":{"titel":"File:Epipremnum aureum (BYU, LSB).jpg","seite":"https://commons.wikimedia.org/wiki/File:Epipremnum_aureum_(BYU,_LSB).jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Ben PL","w":720,"h":960,"v":"f7987332"},"einblatt":{"titel":"File:Peace lily - 1 - cropped.jpg","seite":"https://commons.wikimedia.org/wiki/File:Peace_lily_-_1_-_cropped.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"W.carter","w":720,"h":1155,"v":"d7123fbb"},"erbsenpflanze":{"titel":"File:Curio rowleyanus syn. Senecio rowleyanus 2019-04-14 02.jpg","seite":"https://commons.wikimedia.org/wiki/File:Curio_rowleyanus_syn._Senecio_rowleyanus_2019-04-14_02.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Agnieszka Kwiecień, Nova","w":720,"h":540,"v":"a7e07cc4"},"euphorbia-obesa":{"titel":"File:Euphorbia obesa obesa3 ies.jpg","seite":"https://commons.wikimedia.org/wiki/File:Euphorbia_obesa_obesa3_ies.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Frank Vincentz","w":720,"h":630,"v":"11ac476b"},"fittonia":{"titel":"File:Colpfl25.jpg","seite":"https://commons.wikimedia.org/wiki/File:Colpfl25.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Louise Wolff --darina 00:12, 7 May 2005 (UTC)","w":720,"h":540,"v":"69a45458"},"flamingoblume":{"titel":"File:AnthuriumAndraenum.jpg","seite":"https://commons.wikimedia.org/wiki/File:AnthuriumAndraenum.jpg","lizenz":"CC BY 2.5","lizenzUrl":"https://creativecommons.org/licenses/by/2.5","urheber":"Taken by Fanghong","w":720,"h":540,"v":"71fc5e44"},"geigenfeige":{"titel":"File:Fiddle Leaf Fig in pot.jpg","seite":"https://commons.wikimedia.org/wiki/File:Fiddle_Leaf_Fig_in_pot.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"No machine-readable author provided. Morrisjm assumed (based on copyright claims).","w":720,"h":1083,"v":"b5439029"},"geldbaum":{"titel":"File:Crassula ovata potted plant.jpg","seite":"https://commons.wikimedia.org/wiki/File:Crassula_ovata_potted_plant.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"BillieStarDoll92","w":640,"h":853,"v":"4a2f10fd"},"gruenlilie":{"titel":"File:Chlorophytum comosum eastern cape.jpg","seite":"https://commons.wikimedia.org/wiki/File:Chlorophytum_comosum_eastern_cape.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Tony Rebelo","w":720,"h":527,"v":"6e168c56"},"gummibaum":{"titel":"File:Rubber Plant (Ficus elastica 'Robusta').jpg","seite":"https://commons.wikimedia.org/wiki/File:Rubber_Plant_(Ficus_elastica_%27Robusta%27).jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/3.0","urheber":"Mokkie","w":640,"h":1138,"v":"2a51e077"},"hoya-carnosa":{"titel":"File:Hoya carnosa inflorescence ies.jpg","seite":"https://commons.wikimedia.org/wiki/File:Hoya_carnosa_inflorescence_ies.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Frank Vincentz","w":720,"h":630,"v":"1446e7ad"},"kentia":{"titel":"File:Howea forsteriana Lord Howe Island.jpg","seite":"https://commons.wikimedia.org/wiki/File:Howea_forsteriana_Lord_Howe_Island.jpg","lizenz":"CC BY 2.0","lizenzUrl":"https://creativecommons.org/licenses/by/2.0","urheber":"Black Diamond Images","w":720,"h":478,"v":"abd77e10"},"lithops":{"titel":"File:Lithops.JPG","seite":"https://commons.wikimedia.org/wiki/File:Lithops.JPG","lizenz":"Public domain","lizenzUrl":"","urheber":"Leoninhas at Portuguese Wikipedia","w":640,"h":480,"v":"ba65642a"},"maranta":{"titel":"File:Prayer Plant (Maranta leuconeura) (3073344552).jpg","seite":"https://commons.wikimedia.org/wiki/File:Prayer_Plant_(Maranta_leuconeura)_(3073344552).jpg","lizenz":"CC BY 2.0","lizenzUrl":"https://creativecommons.org/licenses/by/2.0","urheber":"Cliff from Arlington, Virginia, USA","w":640,"h":427,"v":"2966592f"},"monstera-adansonii":{"titel":"File:Monstera adansonii 79319231.jpg","seite":"https://commons.wikimedia.org/wiki/File:Monstera_adansonii_79319231.jpg","lizenz":"CC BY 4.0","lizenzUrl":"https://creativecommons.org/licenses/by/4.0","urheber":"Aitor","w":720,"h":720,"v":"5c9894a3"},"monstera-albo":{"titel":"File:Fruit Salad Plant (Monstera deliciosa 'Albo-Variegata') 1.jpg","seite":"https://commons.wikimedia.org/wiki/File:Fruit_Salad_Plant_(Monstera_deliciosa_%27Albo-Variegata%27)_1.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/3.0","urheber":"Mokkie","w":720,"h":1280,"v":"545da498"},"monstera-deliciosa":{"titel":"File:Monstera deliciosa2.jpg","seite":"https://commons.wikimedia.org/wiki/File:Monstera_deliciosa2.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Unbekannt","w":720,"h":818,"v":"b54980ab"},"monstera-obliqua-peru":{"titel":"File:Obiqula.jpg","seite":"https://commons.wikimedia.org/wiki/File:Obiqula.jpg","lizenz":"CC0","lizenzUrl":"http://creativecommons.org/publicdomain/zero/1.0/deed.en","urheber":"User77905","w":686,"h":1024,"v":"0575550f"},"monstera-thai-constellation":{"titel":"File:201016 117 San Diego Botanic Garden - Dickinson Family Conseratory, Monstera deliciosa 'Thai Constellation' Variegated Mexican Breadfruit, Aglaomorpha coronans Santa Rosa Fern.jpg","seite":"https://commons.wikimedia.org/wiki/File:201016_117_San_Diego_Botanic_Garden_-_Dickinson_Family_Conseratory,_Monstera_deliciosa_%27Thai_Constellation%27_Variegated_Mexican_Breadfruit,_Aglaomorpha_coronans_Santa_Rosa_Fern.jpg","lizenz":"CC BY 2.0","lizenzUrl":"https://creativecommons.org/licenses/by/2.0","urheber":"cultivar413","w":640,"h":814,"v":"e65b34f6"},"nepenthes-ventrata":{"titel":"File:Pitcher Plant (Nepenthes × ventrata).jpg","seite":"https://commons.wikimedia.org/wiki/File:Pitcher_Plant_(Nepenthes_%C3%97_ventrata).jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/3.0","urheber":"Mokkie","w":720,"h":981,"v":"f09e079d"},"nephrolepis":{"titel":"File:NephrolepisExaltata.jpg","seite":"https://commons.wikimedia.org/wiki/File:NephrolepisExaltata.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Taken by Fanghong","w":720,"h":540,"v":"65af66fb"},"nestfarn":{"titel":"File:Asplenium nidus @ Puerto de la Cruz.jpg","seite":"https://commons.wikimedia.org/wiki/File:Asplenium_nidus_@_Puerto_de_la_Cruz.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Vincent Malloy","w":720,"h":540,"v":"bbf38007"},"peperomia-argyreia":{"titel":"File:Peperomia argyreia.jpg","seite":"https://commons.wikimedia.org/wiki/File:Peperomia_argyreia.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/3.0","urheber":"James Steakley","w":720,"h":540,"v":"4ac6c18d"},"pfeilwurz-orbifolia":{"titel":"File:Goeppertia orbifolia in China (2).jpg","seite":"https://commons.wikimedia.org/wiki/File:Goeppertia_orbifolia_in_China_(2).jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Dinkun Chen","w":720,"h":478,"v":"046154ab"},"phalaenopsis":{"titel":"File:Phalaenopsis philippinensis Orchi 008.jpg","seite":"https://commons.wikimedia.org/wiki/File:Phalaenopsis_philippinensis_Orchi_008.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Orchi","w":720,"h":468,"v":"1fe7738b"},"philodendron-gloriosum":{"titel":"File:Philodendron gloriosum (29587099650).jpg","seite":"https://commons.wikimedia.org/wiki/File:Philodendron_gloriosum_(29587099650).jpg","lizenz":"CC BY 2.0","lizenzUrl":"https://creativecommons.org/licenses/by/2.0","urheber":"Dick Culbert from Gibsons, B.C., Canada","w":720,"h":734,"v":"5914fed0"},"philodendron-hederaceum":{"titel":"File:Philodendron scandens subsp oxycardium2.jpg","seite":"https://commons.wikimedia.org/wiki/File:Philodendron_scandens_subsp_oxycardium2.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"KENPEI","w":685,"h":922,"v":"42b55c0f"},"philodendron-melanochrysum":{"titel":"File:PhilodendronMelanochrysum.jpg","seite":"https://commons.wikimedia.org/wiki/File:PhilodendronMelanochrysum.jpg","lizenz":"Public domain","lizenzUrl":"","urheber":"Chhe (talk)","w":720,"h":960,"v":"1696ae89"},"philodendron-pink-princess":{"titel":"File:Pink princess philodendron.jpg","seite":"https://commons.wikimedia.org/wiki/File:Pink_princess_philodendron.jpg","lizenz":"CC0","lizenzUrl":"http://creativecommons.org/publicdomain/zero/1.0/deed.en","urheber":"Cmushore","w":720,"h":1386,"v":"38a200c0"},"philodendron-spiritus-sancti":{"titel":"File:Philodendron spiritus-sancti in Brazil.jpg","seite":"https://commons.wikimedia.org/wiki/File:Philodendron_spiritus-sancti_in_Brazil.jpg","lizenz":"CC BY 4.0","lizenzUrl":"https://creativecommons.org/licenses/by/4.0","urheber":"Alexandre Magno","w":720,"h":960,"v":"6cd47ab9"},"philodendron-verrucosum":{"titel":"File:Philodendron verrucosum 58629212.jpg","seite":"https://commons.wikimedia.org/wiki/File:Philodendron_verrucosum_58629212.jpg","lizenz":"CC0","lizenzUrl":"http://creativecommons.org/publicdomain/zero/1.0/deed.en","urheber":"Dario","w":720,"h":540,"v":"1102ee98"},"pinguicula":{"titel":"File:Pinguicula ramosa at Koushinsou 2.jpg","seite":"https://commons.wikimedia.org/wiki/File:Pinguicula_ramosa_at_Koushinsou_2.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Anonymous Powered at Japanese Wikipedia","w":720,"h":540,"v":"5d69cb01"},"rhaphidophora-tetrasperma":{"titel":"File:Rhapidophora Tetrasperma.jpg","seite":"https://commons.wikimedia.org/wiki/File:Rhapidophora_Tetrasperma.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Jule.Kat","w":720,"h":540,"v":"57bb4440"},"schlumbergera":{"titel":"File:Schlumbergera (actm) 01.jpg","seite":"https://commons.wikimedia.org/wiki/File:Schlumbergera_(actm)_01.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Agnes Monkelbaan","w":720,"h":814,"v":"9645414b"},"scindapsus-pictus":{"titel":"File:Scindapsus pictus argyraeus-1-nature love-yercaud-salem-India.jpg","seite":"https://commons.wikimedia.org/wiki/File:Scindapsus_pictus_argyraeus-1-nature_love-yercaud-salem-India.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Yercaud-elango","w":720,"h":540,"v":"cbb3b5f9"},"strahlenaralie":{"titel":"File:Schefflera arboricola = Heptapleurum arboricola (Araliaceae) (50041889661).jpg","seite":"https://commons.wikimedia.org/wiki/File:Schefflera_arboricola_%3D_Heptapleurum_arboricola_(Araliaceae)_(50041889661).jpg","lizenz":"CC BY-SA 2.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/2.0","urheber":"Dr. Alexey Yakovlev","w":720,"h":1080,"v":"14bdb389"},"syngonium-albo":{"titel":"File:Syngonium podophyllum albo-2-NRI Layout-bengaluru-India.jpg","seite":"https://commons.wikimedia.org/wiki/File:Syngonium_podophyllum_albo-2-NRI_Layout-bengaluru-India.jpg","lizenz":"CC BY-SA 4.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/4.0","urheber":"Yercaud-elango","w":720,"h":960,"v":"c60e98ee"},"tradescantia-zebrina":{"titel":"File:Zebrina pendula 20060521 2.JPG","seite":"https://commons.wikimedia.org/wiki/File:Zebrina_pendula_20060521_2.JPG","lizenz":"CC BY-SA 2.5","lizenzUrl":"https://creativecommons.org/licenses/by-sa/2.5","urheber":"Ruestz","w":720,"h":540,"v":"48e940d4"},"ufopflanze":{"titel":"File:Peperomioides-07.JPG","seite":"https://commons.wikimedia.org/wiki/File:Peperomioides-07.JPG","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"Pepe-MS","w":720,"h":957,"v":"4cba6699"},"usambaraveilchen":{"titel":"File:Streptocarpus ionanthus (as Saintpaulia ionantha) - Curtis' 121 (Ser. 3 no. 51) pl. 7408 (1895).jpg","seite":"https://commons.wikimedia.org/wiki/File:Streptocarpus_ionanthus_(as_Saintpaulia_ionantha)_-_Curtis%27_121_(Ser._3_no._51)_pl._7408_(1895).jpg","lizenz":"Public domain","lizenzUrl":"","urheber":"M. S. del. ( = Matilda Smith, 1854-1926), J. N. Fitch lith. ( = John Nugent Fitch, 1840–1927) Description by Joseph Dalton Hooker (1817—1911) Colour and contrast altered to remove paper yellowing by Peter coxhead","w":720,"h":1176,"v":"d8dc2644"},"venusfliegenfalle":{"titel":"File:Venus Fly Trap (Dionaea muscipula) 1.jpg","seite":"https://commons.wikimedia.org/wiki/File:Venus_Fly_Trap_(Dionaea_muscipula)_1.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"https://creativecommons.org/licenses/by-sa/3.0","urheber":"Mokkie","w":640,"h":480,"v":"c2d10413"},"zamioculcas":{"titel":"File:Zamioculcas zamiifolia 1.jpg","seite":"https://commons.wikimedia.org/wiki/File:Zamioculcas_zamiifolia_1.jpg","lizenz":"CC BY-SA 3.0","lizenzUrl":"http://creativecommons.org/licenses/by-sa/3.0/","urheber":"User:WeFt","w":720,"h":960,"v":"eaff5867"}};</script>
 <script>
 /* GRUENZEUG – Hilfsfunktionen: DOM, Datum (Ortszeit), Zahlen (de-DE), Suche, Bilder verkleinern.
    `U` läuft auch in Node (tools/check.js, tools/selftest.js laden diese Datei). */
@@ -349,7 +478,6 @@ const U = {
       if (v == null || v === false) continue;
       if (k === 'class') e.className = v;
       else if (k === 'text') e.textContent = v;
-      else if (k === 'html') e.innerHTML = v;
       else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
       else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
       else e.setAttribute(k, v === true ? '' : v);
@@ -563,7 +691,8 @@ if (typeof module !== 'undefined') module.exports = Zip;
    Verschlüsselte Daten: iv (12 Byte) + Chiffretext, als Bytes oder Base64. Läuft nur im Browser. */
 const Krypto = {
   key: null,                 // CryptoKey, solange entsperrt
-  ITER: 200000,
+  ITER: 200000,              // Stand bis Oktober 2026 (cfg ohne `iter`)
+  ITER_NEU: 600000,          // seitdem für neue PINs (OWASP-Empfehlung für PBKDF2-SHA256)
 
   ok() { return typeof crypto !== 'undefined' && !!crypto.subtle; },
   zufall(n) { return crypto.getRandomValues(new Uint8Array(n)); },
@@ -571,9 +700,9 @@ const Krypto = {
   unb64(s) { const b = atob(s); const o = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) o[i] = b.charCodeAt(i); return o; },
   neuesSalz() { return Krypto.b64(Krypto.zufall(16)); },
 
-  async ableiten(pin, saltB64) {
+  async ableiten(pin, saltB64, iter) {
     const roh = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']);
-    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: Krypto.unb64(saltB64), iterations: Krypto.ITER, hash: 'SHA-256' }, roh, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: Krypto.unb64(saltB64), iterations: iter || Krypto.ITER, hash: 'SHA-256' }, roh, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
   },
   async bytesMit(key, bytes) {
     const iv = Krypto.zufall(12);
@@ -847,9 +976,34 @@ const Sicherung = {
     if (info.schema > SCHEMA) throw new Error('Die Sicherung stammt aus einer neueren App-Version. Bitte die App aktualisieren.');
     return { info, z };
   },
+  /** Prüft Pflanzen und Einträge aus einer Datei (Sicherung, Cloud): nur wohlgeformte Dokumente kommen durch, alles andere
+      wird verworfen. Schützt die Oberfläche vor kaputten oder manipulierten Dateien. → {plants, entries, verworfen} */
+  pruefe(info) {
+    const idOk = (x) => typeof x === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(x);
+    const txt = (x, n) => x == null || (typeof x === 'string' && x.length <= (n || 4000));
+    const obj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+    const fotos = (a) => Array.isArray(a) && a.length <= 60 && a.every(idOk);
+    let verworfen = 0;
+    const plants = (Array.isArray(info.plants) ? info.plants : []).filter((p) => {
+      const ok = obj(p) && idOk(p.id) && Gruen.KINDER[p.kind] && typeof p.name === 'string' && p.name.length <= 200 && txt(p.art, 300) && txt(p.standort, 200) && txt(p.notiz, 20000)
+        && (p.titelFoto == null || idOk(p.titelFoto)) && (p.fakten == null || Array.isArray(p.fakten)) && (p.status == null || typeof p.status === 'string');
+      if (!ok) verworfen++;
+      return ok;
+    });
+    const entries = (Array.isArray(info.entries) ? info.entries : []).filter((e) => {
+      const ok = obj(e) && idOk(e.id) && idOk(e.plantId) && typeof e.typ === 'string' && e.typ.length <= 40 && /^\d{4}-\d{2}-\d{2}$/.test(e.datum || '') && txt(e.text, 20000)
+        && (e.fotos == null || fotos(e.fotos)) && (e.werte == null || obj(e.werte));
+      if (!ok) verworfen++;
+      return ok;
+    });
+    const photos = (Array.isArray(info.photos) ? info.photos : []).filter((f) => obj(f) && idOk(f.id));
+    return { plants, entries, photos, verworfen };
+  },
   /** modus 'zusammen' (vorhandene Daten bleiben, gleiche IDs werden überschrieben) oder 'ersetzen'. → Zähler */
   async einspielen(file, modus, fortschritt) {
-    const { info, z } = await Sicherung.lesen(file);
+    const { info: roh, z } = await Sicherung.lesen(file);
+    const geprueft = Sicherung.pruefe(roh);
+    const info = Object.assign({}, roh, { plants: geprueft.plants, entries: geprueft.entries, photos: geprueft.photos });
     if (modus === 'ersetzen') await Data.alleLoeschen(true);
     let n = 0;
     for (const f of info.photos || []) {
@@ -865,13 +1019,13 @@ const Sicherung = {
     for (const e of info.entries || []) await Data.saveEntry(e);
     const m = info.meta || {};
     if (m.wunsch) await Data.wunschSpeichern([...new Set([...Data.wunsch(), ...m.wunsch])]);
-    return { pflanzen: (info.plants || []).length, eintraege: (info.entries || []).length, fotos: (info.photos || []).length };
+    return { pflanzen: info.plants.length, eintraege: info.entries.length, fotos: info.photos.length, verworfen: geprueft.verworfen };
   },
   /** Datei speichern: auf dem Handy über das Teilen-Menü, sonst Download */
-  async speichern(blob, name) {
-    const file = new File([blob], name, { type: 'application/zip' });
+  async speichern(blob, name, typ) {
+    const file = new File([blob], name, { type: typ || 'application/zip' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'Gruenzeug-Sicherung' }); return 'geteilt'; }
+      try { await navigator.share({ files: [file], title: typ ? 'Gruenzeug' : 'Gruenzeug-Sicherung' }); return 'geteilt'; }
       catch (e) { if (e && e.name === 'AbortError') return 'abgebrochen'; }
     }
     const a = U.el('a', { href: URL.createObjectURL(blob), download: name });
@@ -1238,6 +1392,11 @@ const Gruen = {
   thema(o) { Gruen.wissen.push(o); },
   symptom(o) { Gruen.diagnose.push(o); },
   tipp(o) { Gruen.tipps.push(o); },
+  /** Lexikon-Foto einer Art: {src, urheber, lizenz, lizenzUrl, seite, w, h} oder null (GRUEN_BILDER setzt tools/build.py) */
+  bild(artId) {
+    const b = typeof GRUEN_BILDER !== 'undefined' && GRUEN_BILDER[artId];
+    return b ? Object.assign({ src: 'bilder/' + artId + '.jpg?v=' + b.v }, b) : null;
+  },
   artById(id) { return Gruen.arten.find((a) => a.id === id) || null; },
 
   SELTEN: ['', 'Häufig', 'Beliebt', 'Selten', 'Sammlerstück'],
@@ -2609,6 +2768,11 @@ const ICON = {
   ordner: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   gift: '<path d="M12 3c-4 0-7 3-7 7v2l-2 3v2h18v-2l-2-3v-2c0-4-3-7-7-7z"/><circle cx="9.500" cy="10" r="1" fill="currentColor"/><circle cx="14.500" cy="10" r="1" fill="currentColor"/>',
   pfote: '<circle cx="7" cy="9" r="2"/><circle cx="12" cy="6.500" r="2"/><circle cx="17" cy="9" r="2"/><path d="M12 12c-3 0-5 2.500-5 4.500 0 1.500 1 2.500 2.500 2.500 1 0 1.500-.500 2.500-.500s1.500.500 2.500.500c1.500 0 2.500-1 2.500-2.500 0-2-2-4.500-5-4.500z"/>',
+  palette: '<path d="M12 3a9 9 0 0 0 0 18c1.500 0 2-1 2-2s-.500-1.500.500-2.500S17 15 19 15a2 2 0 0 0 2-2c0-5-4-10-9-10z"/><circle cx="8" cy="11" r="1" fill="currentColor"/><circle cx="12" cy="7.500" r="1" fill="currentColor"/><circle cx="16.500" cy="9.500" r="1" fill="currentColor"/>',
+  pokal: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8 20h8M10 17h4"/>',
+  frage: '<circle cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.700.400-1 .900-1 1.700M12 17v.500"/>',
+  hoch: '<path d="M6 15l6-6 6 6"/>',
+  runter: '<path d="M6 9l6 6 6-6"/>',
   pille: '<path d="M10.500 3.500a4.500 4.500 0 0 1 6.400 6.400l-7 7a4.500 4.500 0 0 1-6.400-6.400z"/><path d="M8.500 8.500l7 7"/>',
 };
 const ICON_LEXIKON_KAT = { 'Aronstabgewächse': 'blatt', 'Sukkulenten & Kakteen': 'sonne', 'Farne': 'blatt', 'Palmen': 'blatt', 'Orchideen': 'stern', 'Fleischfresser': 'kaefer', 'Blühpflanzen': 'stern', 'Feigen & Bäume': 'blatt', 'Hängepflanzen': 'blatt', 'Buntblatt': 'blatt' };
@@ -2647,9 +2811,24 @@ const App = {
       App.tabbarEl.append(b);
     }
     root.append(App.stackEl, App.tabbarEl);
+    App.passeHoehe();
+    window.addEventListener('resize', App.passeHoehe); window.addEventListener('orientationchange', () => setTimeout(App.passeHoehe, 250));
     window.addEventListener('popstate', () => { if (App.seiten.length > 1) App._abbauen(); });
     App._bereit = true;
     App.tab(Einst.get('tab', 'heute'));
+  },
+  /** iPhone-App vom Home-Bildschirm: iOS meldet manchmal eine zu kleine Fensterhöhe (um die Statusleiste), dann
+      bliebe unter der Menüleiste ein leerer Streifen. Dann die volle Bildschirmhöhe nehmen. */
+  passeHoehe() {
+    const root = document.getElementById('app');
+    if (!root) return;
+    let h = window.innerHeight;
+    if (navigator.standalone === true && /iPhone|iPod/.test(navigator.userAgent)) {
+      const hoch = window.innerHeight >= window.innerWidth;
+      const s = hoch ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+      if (s > h && s - h < 120) h = s;
+    }
+    root.style.height = h + 'px';
   },
   tab(id) {
     if (!App.tabBauer[id]) id = 'heute';
@@ -2783,7 +2962,17 @@ const App = {
   },
   /** Foto oder Platzhalter */
   titelbild(plant, thumb, klasse) {
-    return plant.titelFoto ? App.bild(plant.titelFoto, thumb, klasse) : App.platzhalter(plant.name, klasse);
+    if (plant.titelFoto) return App.bild(plant.titelFoto, thumb, klasse);
+    const b = plant.kind !== 'cannabis' && plant.artId && Gruen.bild(plant.artId);
+    return b ? App.artBild(plant.artId, klasse) : App.platzhalter(plant.name, klasse);
+  },
+  /** Lexikon-Foto einer Art (Beispielbild); fällt auf den Platzhalter zurück, wenn es nicht lädt */
+  artBild(artId, klasse, name) {
+    const b = Gruen.bild(artId);
+    if (!b) return App.platzhalter(name || artId, klasse);
+    const img = U.el('img', { class: 'bild ' + (klasse || ''), alt: '', loading: 'lazy', decoding: 'async', src: b.src });
+    img.addEventListener('error', () => img.replaceWith(App.platzhalter(name || artId, klasse)), { once: true });
+    return img;
   },
   /** Vollbild mit Wischen. fotos: Liste von Foto-IDs; extra: {text(i), aktion:{label, fn(id)}} */
   lupe(fotos, start, extra) {
@@ -2874,6 +3063,121 @@ const App = {
   },
 };
 //# sourceURL=js/ui.js
+</script>
+<script>
+/* GRUENZEUG – Design: Theme, Hell/Dunkel, Akzentfarbe, Ecken, Schrift, Tab-Leiste, Kachel-Spalten.
+   Die Wahl liegt in Einst 'design' (localStorage) und wird als data-Attribute auf <html> gesetzt; die Farben stehen
+   in css/style.css. Ein kleines Skript in app.html setzt die Attribute schon vor dem ersten Zeichnen (kein Aufblitzen). */
+const Design = {
+  STANDARD: { theme: 'feld', modus: 'auto', akzent: 'standard', ecken: 'rund', schrift: 'buch', tabs: 'klassisch', spalten: 2 },
+  /* Vorschau-Farben je Theme: [Hintergrund, Karte, Akzent] hell / dunkel */
+  THEMES: [
+    { id: 'feld', label: 'Feldbuch', t: 'Papierton, Moosgrün', hell: ['#f2eee4', '#fbf9f3', '#2f5a3d'], dunkel: ['#121912', '#1a231c', '#86bb92'] },
+    { id: 'dschungel', label: 'Dschungel', t: 'Satt, tiefgrün', hell: ['#e6f2ea', '#f5fbf7', '#0f7a47'], dunkel: ['#0b1a14', '#12261d', '#4fd08a'] },
+    { id: 'bluete', label: 'Blüte', t: 'Zart, rosé', hell: ['#fbf0f1', '#fffafa', '#a63d62'], dunkel: ['#1d1318', '#271a21', '#f08aab'] },
+    { id: 'ozean', label: 'Ozean', t: 'Kühl, blaugrau', hell: ['#eaf1f6', '#f8fbfd', '#1f6f9c'], dunkel: ['#0d1822', '#14232f', '#5db4e6'] },
+    { id: 'tinte', label: 'Tinte', t: 'Schwarz-weiß, klar', hell: ['#f4f4f2', '#ffffff', '#111111'], dunkel: ['#000000', '#111111', '#f2f2f2'] },
+  ],
+  /* Akzentfarben: Farbton (h) → Farben für Hell und Dunkel werden daraus gerechnet */
+  AKZENTE: [
+    { id: 'standard', label: 'Passend zum Theme' },
+    { id: 'moos', label: 'Moos', h: 140, s: 38 }, { id: 'limette', label: 'Limette', h: 85, s: 55 }, { id: 'gold', label: 'Gold', h: 42, s: 70 },
+    { id: 'terrakotta', label: 'Terrakotta', h: 15, s: 62 }, { id: 'beere', label: 'Beere', h: 335, s: 50 }, { id: 'flieder', label: 'Flieder', h: 275, s: 40 },
+    { id: 'ozean', label: 'Ozean', h: 205, s: 60 }, { id: 'petrol', label: 'Petrol', h: 180, s: 55 },
+  ],
+  ECKEN: [['rund', 'Rund'], ['weich', 'Weich'], ['kantig', 'Kantig']],
+  SCHRIFTEN: [['buch', 'Buch'], ['sans', 'Modern'], ['rund', 'Rund'], ['mono', 'Mono']],
+  TABS: [['klassisch', 'Klassisch'], ['schwebend', 'Schwebend'], ['kompakt', 'Nur Symbole']],
+
+  get() {
+    const g = Einst.get('design', {});
+    const d = Object.assign({}, Design.STANDARD);
+    for (const k in d) if (g && g[k] != null && typeof g[k] === typeof d[k]) d[k] = g[k];
+    return d;
+  },
+  setzen(k, v) {
+    const d = Design.get(); d[k] = v;
+    Einst.set('design', d);
+    Design.anwenden();
+  },
+  dunkel(d) { d = d || Design.get(); return d.modus === 'dunkel' || (d.modus === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); },
+
+  anwenden() {
+    const d = Design.get(), r = document.documentElement, dunkel = Design.dunkel(d);
+    const attr = (k, v, aus) => { if (v === aus) r.removeAttribute('data-' + k); else r.setAttribute('data-' + k, v); };
+    attr('theme', d.theme, 'feld'); attr('ecken', d.ecken, 'rund'); attr('schrift', d.schrift, 'buch'); attr('tabs', d.tabs, 'klassisch');
+    if (dunkel) r.setAttribute('data-mode', 'dark'); else r.removeAttribute('data-mode');
+    r.style.setProperty('--spalten', String(d.spalten));
+    const a = Design.AKZENTE.find((x) => x.id === d.akzent);
+    for (const v of ['--accent', '--accent-text', '--accent-bg', '--on-accent']) r.style.removeProperty(v);
+    if (a && a.h != null) {
+      const hsl = (h, s, l) => 'hsl(' + h + ' ' + s + '% ' + l + '%)';
+      if (dunkel) {
+        r.style.setProperty('--accent', hsl(a.h, Math.min(a.s + 10, 70), 66)); r.style.setProperty('--accent-text', hsl(a.h, Math.min(a.s + 12, 75), 74));
+        r.style.setProperty('--accent-bg', hsl(a.h, 28, 19)); r.style.setProperty('--on-accent', hsl(a.h, 40, 9));
+      } else {
+        r.style.setProperty('--accent', hsl(a.h, a.s, 30)); r.style.setProperty('--accent-text', hsl(a.h, a.s, 28));
+        r.style.setProperty('--accent-bg', hsl(a.h, 38, 91)); r.style.setProperty('--on-accent', '#fff');
+      }
+    }
+    const meta = document.getElementById('themeColor');
+    if (meta) meta.setAttribute('content', getComputedStyle(r).getPropertyValue('--bg').trim() || '#f2eee4');
+  },
+  init() {
+    Design.anwenden();
+    if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (Design.get().modus === 'auto') Design.anwenden(); });
+  },
+
+  /** Seite „Design“ (Mehr → Design) */
+  seite() {
+    const d = Design.get(), dunkel = Design.dunkel(d);
+    const w = U.el('div');
+    const aendern = (k, v) => { Design.setzen(k, v); App.neu(); };
+    const auswahl = (opt, aktiv, k) => App.segment(opt.map(([id, label]) => ({ id, label })), aktiv, (id) => aendern(k, id));
+
+    // Vorschau
+    const vor = U.el('div', { class: 'card', style: { marginTop: '4px' } },
+      U.el('div', { class: 'etikett', text: 'Vorschau' }),
+      U.el('h3', { text: 'Monstera Albo', style: { marginTop: '4px' } }),
+      U.el('div', { class: 'pillen', style: { marginBottom: '12px' } }, App.pille('Sammlerstück', 'sun', 'stern'), App.pille('Wohnzimmer', 'grau'), App.pille('Gießen', 'clay', 'tropfen')),
+      U.el('div', { class: 'btnreihe' }, U.el('button', { class: 'btn' }, App.icon('tropfen'), 'Gegossen'), U.el('button', { class: 'btn sekundaer', text: 'Foto' })),
+      U.el('div', { class: 'chips', style: { marginTop: '12px', paddingBottom: 0 } }, U.el('span', { class: 'chip on', text: 'Alle' }), U.el('span', { class: 'chip', text: 'Raritäten' }), U.el('span', { class: 'chip', text: 'Favoriten' })));
+    w.append(vor);
+
+    // Theme
+    w.append(App.abschnitt('Theme'));
+    const th = U.el('div', { class: 'themen' });
+    for (const t of Design.THEMES) {
+      const f = dunkel ? t.dunkel : t.hell;
+      const k = U.el('button', { class: 'thema' + (d.theme === t.id ? ' an' : ''), 'aria-pressed': d.theme === t.id ? 'true' : 'false', onclick: () => aendern('theme', t.id) },
+        U.el('span', { class: 'probe', style: { background: f[0] } }, U.el('i', { style: { background: f[1] } }), U.el('b', { style: { background: f[2] } })),
+        U.el('span', { class: 'n', text: t.label }), U.el('span', { class: 'b', text: t.t }));
+      th.append(k);
+    }
+    w.append(th);
+
+    w.append(App.abschnitt('Hell oder dunkel'), auswahl([['auto', 'Wie das Gerät'], ['hell', 'Hell'], ['dunkel', 'Dunkel']], d.modus, 'modus'));
+
+    // Akzent
+    w.append(App.abschnitt('Akzentfarbe'));
+    const ak = U.el('div', { class: 'akzente' });
+    for (const a of Design.AKZENTE) {
+      const farbe = a.h == null ? 'conic-gradient(#2f5a3d, #1f6f9c, #a63d62, #b98a1f, #2f5a3d)' : 'hsl(' + a.h + ' ' + a.s + '% ' + (dunkel ? 62 : 36) + '%)';
+      ak.append(U.el('button', { class: 'akzent' + (d.akzent === a.id ? ' an' : ''), 'aria-label': a.label, 'aria-pressed': d.akzent === a.id ? 'true' : 'false', title: a.label, style: { background: farbe }, onclick: () => aendern('akzent', a.id) }, d.akzent === a.id ? App.icon('haken') : null));
+    }
+    w.append(ak, U.el('p', { class: 'hinweis', text: (Design.AKZENTE.find((a) => a.id === d.akzent) || {}).label || '' }));
+
+    w.append(App.abschnitt('Formen'), auswahl(Design.ECKEN, d.ecken, 'ecken'));
+    w.append(App.abschnitt('Schrift'), auswahl(Design.SCHRIFTEN, d.schrift, 'schrift'));
+    w.append(App.abschnitt('Menüleiste'), auswahl(Design.TABS, d.tabs, 'tabs'));
+    w.append(App.abschnitt('Sammlung'), App.segment([{ id: 2, label: '2 Spalten' }, { id: 3, label: '3 Spalten (klein)' }], d.spalten, (n) => aendern('spalten', n)));
+
+    w.append(U.el('div', { style: { marginTop: '22px' } }, U.el('button', { class: 'btn ghost voll', text: 'Auf Standard zurücksetzen', onclick: () => { Einst.del('design'); Design.anwenden(); App.neu(); App.toast('Standard-Design'); } })));
+    return { titel: 'Design', sub: 'So soll es aussehen', zurueck: true, inhalt: w };
+  },
+};
+if (typeof document !== 'undefined') Design.init();
+//# sourceURL=js/design.js
 </script>
 <script>
 /* GRUENZEUG – Formulare: Feld-Bausteine (F), Pflege-Rechnung (Pflege), Pflanzen- und Eintragsformulare (Formen). */
@@ -3103,10 +3407,32 @@ const Heute = {
     return Data.liste('zimmer', 'aktiv').map((p) => ({ p, n: Pflege.naechste(p, typ) })).filter((x) => x.n && x.n.in <= (tage || 0)).sort((a, b) => a.n.in - b.n.in);
   },
 
+  /* ---------- Widgets ---------- */
+  WIDGETS: [
+    { id: 'stat', label: 'Zahlen', text: 'Pflanzen, Arten, Einträge der Woche' },
+    { id: 'pflege', label: 'Gießen & Düngen heute', text: 'Fällige Pflanzen mit einem Tipp erledigen' },
+    { id: 'woche', label: 'Wochenvorschau', text: 'Die nächsten 7 Tage im Überblick' },
+    { id: 'serie', label: 'Pflege-Rhythmus', text: 'Tage in Folge mit Eintrag' },
+    { id: 'tipp', label: 'Tipp des Monats', text: 'Saisonale Pflege-Hinweise' },
+    { id: 'wusstest', label: 'Wusstest du?', text: 'Ein Pflanzenfakt pro Tag' },
+    { id: 'quiz', label: 'Pflanzen-Quiz', text: 'Erkenne Pflanzen auf Fotos' },
+    { id: 'vorjahr', label: 'Vor einem Jahr', text: 'Fotos von damals' },
+    { id: 'lexikon', label: 'Pflanze des Tages', text: 'Ein Vorschlag aus dem Lexikon' },
+    { id: 'zuletzt', label: 'Zuletzt', text: 'Deine letzten Einträge' },
+  ],
+  /** Reihenfolge und Sichtbarkeit (Einst 'heuteWidgets' = {order, off}); neue Widgets erscheinen automatisch am Ende */
+  widgetPlan() {
+    const g = Einst.get('heuteWidgets', {}), ids = Heute.WIDGETS.map((x) => x.id);
+    const order = (Array.isArray(g.order) ? g.order.filter((id) => ids.includes(id)) : []);
+    for (const id of ids) if (!order.includes(id)) order.push(id);
+    return { order, off: Array.isArray(g.off) ? g.off : [] };
+  },
+
   seite() {
     const w = U.el('div');
     const aktive = Data.liste('zimmer', 'aktiv');
     const jetzt = new Date();
+    const plan = Heute.widgetPlan();
 
     // Sicherung fällig?
     const letzte = Einst.get('letzteSicherung', null);
@@ -3126,70 +3452,113 @@ const Heute = {
       w.append(U.el('div', { class: 'card' }, App.leer('sammlung', 'Dein Pflanzenregal ist noch leer', 'Lege deine erste Pflanze an – mit Foto, Standort und Pflege-Rhythmus. Oder stöbere im Lexikon und übernimm eine Art direkt.',
         { text: 'Erste Pflanze anlegen', icon: 'plus', fn: () => Formen.pflanze('zimmer', null, (p) => { App.tab('sammlung'); App.oeffne(() => Detail.seite(p.id)); }) })));
       w.append(U.el('div', { class: 'btnreihe' }, U.el('button', { class: 'btn sekundaer', onclick: () => App.tab('lexikon') }, App.icon('lexikon'), 'Lexikon'), U.el('button', { class: 'btn sekundaer', onclick: () => App.tab('wissen') }, App.icon('wissen'), 'Pflege-Wissen')));
-    } else {
-      const tage7 = U.plusTage(U.heute(), -7);
-      const n7 = [...Data.entries.values()].filter((e) => e.datum >= tage7 && (Data.plants.get(e.plantId) || {}).kind === 'zimmer').length;
-      const arten = new Set(aktive.map((p) => p.artId || U.norm(p.art || p.name))).size;
-      w.append(U.el('div', { class: 'stat' },
-        U.el('div', null, U.el('b', { text: String(aktive.length) }), U.el('span', { text: aktive.length === 1 ? 'Pflanze' : 'Pflanzen' })),
-        U.el('div', null, U.el('b', { text: String(arten) }), U.el('span', { text: arten === 1 ? 'Art' : 'Arten' })),
-        U.el('div', null, U.el('b', { text: String(n7) }), U.el('span', { text: 'Einträge/Woche' }))));
-
-      // Pflege heute
-      const giess = Heute.faellige('giessen', 0), duen = Heute.faellige('duengen', 0);
-      const karte = U.el('div', { class: 'card flach' });
-      const kopf = (titel, icon, liste, typ) => {
-        const k = U.el('div', { class: 'zeile', style: { cursor: 'default', minHeight: '46px' } }, App.icon(icon), U.el('div', { class: 't' }, U.el('b', { text: titel })));
-        if (liste.length > 1) k.append(U.el('button', { class: 'btn klein sekundaer', text: 'Alle erledigt', onclick: async () => { for (const x of liste) await Pflege.schnell(x.p, typ); App.toast(liste.length + ' Pflanzen versorgt'); App.neu(); } }));
-        return k;
-      };
-      const zeilen = (liste, typ) => liste.map((x) => U.el('div', { class: 'faellig' },
-        U.el('button', { class: 'thumb', 'aria-label': x.p.name, onclick: () => App.oeffne(() => Detail.seite(x.p.id)) }, App.titelbild(x.p, true)),
-        U.el('div', { class: 't' }, U.el('b', { text: x.p.name }), U.el('span', { class: x.n.in < 0 ? 'ueber' : '', text: Pflege.text(x.n) + (x.n.letzte ? ' · zuletzt ' + U.rel(x.n.letzte) : '') })),
-        U.el('button', { class: 'tropf', 'aria-label': typ === 'giessen' ? 'Gegossen' : 'Gedüngt', onclick: async (ev) => { ev.currentTarget.classList.add('fertig'); await Pflege.schnell(x.p, typ); App.neu(); } }, App.icon(typ === 'giessen' ? 'tropfen' : 'flasche'))));
-      if (giess.length) { karte.append(kopf('Gießen heute', 'tropfen', giess, 'giessen'), ...zeilen(giess, 'giessen')); }
-      if (duen.length) { karte.append(kopf('Düngen heute', 'flasche', duen, 'duengen'), ...zeilen(duen, 'duengen')); }
-      if (giess.length || duen.length) w.append(karte);
-      else {
-        const demnaechst = Heute.faellige('giessen', 365).filter((x) => x.n.in > 0)[0];
-        const hat = aktive.some((p) => p.giessTage);
-        w.append(U.el('div', { class: 'card' }, U.el('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } }, U.el('div', { class: 'tropf fertig' }, App.icon('haken')),
-          U.el('div', null, U.el('b', { text: hat ? 'Alles versorgt' : 'Pflege-Erinnerungen' }), U.el('div', { class: 'muted klein', text: demnaechst ? 'Als Nächstes: ' + demnaechst.p.name + ' ' + Pflege.text(demnaechst.n) : hat ? 'Heute ist nichts fällig.' : 'Trage bei einer Pflanze ein, wie oft sie gegossen wird – dann erinnert dich diese Seite.' })))));
-      }
-      const bald = Heute.faellige('giessen', 2).filter((x) => x.n.in > 0);
-      if (giess.length && bald.length) w.append(U.el('p', { class: 'muted klein', style: { margin: '-4px 4px 12px' }, text: 'Demnächst: ' + bald.slice(0, 3).map((x) => x.p.name + ' (' + (x.n.in === 1 ? 'morgen' : 'in ' + x.n.in + ' Tagen') + ')').join(', ') }));
     }
 
-    // Tipp des Monats
-    const tipp = Gruen.tipps.find((t) => t.monat === jetzt.getMonth() + 1) || Gruen.tipps[0];
-    if (tipp) w.append(U.el('div', { class: 'tipp' }, U.el('div', { class: 'etikett', text: 'Tipp für den ' + U.MONATE[jetzt.getMonth()] }), U.el('h3', { text: tipp.titel }), U.el('p', { text: tipp.text }),
-      tipp.thema ? U.el('button', { class: 'btn klein ghost', style: { marginTop: '10px' }, text: 'Mehr dazu', onclick: () => App.oeffne(() => Wissen.thema(tipp.thema)) }) : null));
-
-    // Vor einem Jahr
-    const vor = Heute.vorEinemJahr();
-    if (vor.length) {
-      const g = U.el('div', { class: 'galerie' });
-      vor.slice(0, 3).forEach((e) => g.append(U.el('button', { 'aria-label': 'Foto ansehen', onclick: () => App.oeffne(() => Detail.seite(e.plantId)) }, App.bild(e.fotos[0], true))));
-      w.append(App.abschnitt('Vor einem Jahr'), U.el('div', { class: 'card' }, g, U.el('div', { class: 'muted klein', style: { marginTop: '8px' }, text: vor.slice(0, 3).map((e) => (Data.plants.get(e.plantId) || {}).name).filter((x, i, a) => a.indexOf(x) === i).join(', ') + ' · ' + U.datum(vor[0].datum) })));
+    const bau = {
+      stat: () => {
+        if (!aktive.length) return null;
+        const tage7 = U.plusTage(U.heute(), -7);
+        const n7 = [...Data.entries.values()].filter((e) => e.datum >= tage7 && (Data.plants.get(e.plantId) || {}).kind === 'zimmer').length;
+        const arten = new Set(aktive.map((p) => p.artId || U.norm(p.art || p.name))).size;
+        return U.el('div', { class: 'stat' },
+          U.el('div', null, U.el('b', { text: String(aktive.length) }), U.el('span', { text: aktive.length === 1 ? 'Pflanze' : 'Pflanzen' })),
+          U.el('div', null, U.el('b', { text: String(arten) }), U.el('span', { text: arten === 1 ? 'Art' : 'Arten' })),
+          U.el('div', null, U.el('b', { text: String(n7) }), U.el('span', { text: 'Einträge/Woche' })));
+      },
+      pflege: () => {
+        if (!aktive.length) return null;
+        const f = U.el('div');
+        const giess = Heute.faellige('giessen', 0), duen = Heute.faellige('duengen', 0);
+        const karte = U.el('div', { class: 'card flach' });
+        const kopf = (titel, icon, liste, typ) => {
+          const k = U.el('div', { class: 'zeile', style: { cursor: 'default', minHeight: '46px' } }, App.icon(icon), U.el('div', { class: 't' }, U.el('b', { text: titel })));
+          if (liste.length > 1) k.append(U.el('button', { class: 'btn klein sekundaer', text: 'Alle erledigt', onclick: async () => { for (const x of liste) await Pflege.schnell(x.p, typ); App.toast(liste.length + ' Pflanzen versorgt'); App.neu(); } }));
+          return k;
+        };
+        const zeilen = (liste, typ) => liste.map((x) => U.el('div', { class: 'faellig' },
+          U.el('button', { class: 'thumb', 'aria-label': x.p.name, onclick: () => App.oeffne(() => Detail.seite(x.p.id)) }, App.titelbild(x.p, true)),
+          U.el('div', { class: 't' }, U.el('b', { text: x.p.name }), U.el('span', { class: x.n.in < 0 ? 'ueber' : '', text: Pflege.text(x.n) + (x.n.letzte ? ' · zuletzt ' + U.rel(x.n.letzte) : '') })),
+          U.el('button', { class: 'tropf', 'aria-label': typ === 'giessen' ? 'Gegossen' : 'Gedüngt', onclick: async (ev) => { ev.currentTarget.classList.add('fertig'); await Pflege.schnell(x.p, typ); App.neu(); } }, App.icon(typ === 'giessen' ? 'tropfen' : 'flasche'))));
+        if (giess.length) { karte.append(kopf('Gießen heute', 'tropfen', giess, 'giessen'), ...zeilen(giess, 'giessen')); }
+        if (duen.length) { karte.append(kopf('Düngen heute', 'flasche', duen, 'duengen'), ...zeilen(duen, 'duengen')); }
+        if (giess.length || duen.length) f.append(karte);
+        else {
+          const demnaechst = Heute.faellige('giessen', 365).filter((x) => x.n.in > 0)[0];
+          const hat = aktive.some((p) => p.giessTage);
+          f.append(U.el('div', { class: 'card' }, U.el('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } }, U.el('div', { class: 'tropf fertig' }, App.icon('haken')),
+            U.el('div', null, U.el('b', { text: hat ? 'Alles versorgt' : 'Pflege-Erinnerungen' }), U.el('div', { class: 'muted klein', text: demnaechst ? 'Als Nächstes: ' + demnaechst.p.name + ' ' + Pflege.text(demnaechst.n) : hat ? 'Heute ist nichts fällig.' : 'Trage bei einer Pflanze ein, wie oft sie gegossen wird – dann erinnert dich diese Seite.' })))));
+        }
+        const bald = Heute.faellige('giessen', 2).filter((x) => x.n.in > 0);
+        if (giess.length && bald.length) f.append(U.el('p', { class: 'muted klein', style: { margin: '-4px 4px 12px' }, text: 'Demnächst: ' + bald.slice(0, 3).map((x) => x.p.name + ' (' + (x.n.in === 1 ? 'morgen' : 'in ' + x.n.in + ' Tagen') + ')').join(', ') }));
+        return f;
+      },
+      woche: () => { const k = aktive.length ? Plan.streifen() : null; return k ? U.el('div', null, App.abschnitt('Diese Woche', { text: 'Pflegeplan', fn: () => App.oeffne(() => Plan.seite()) }), k) : null; },
+      serie: () => Serie.karte(),
+      tipp: () => {
+        const tipp = Gruen.tipps.find((t) => t.monat === jetzt.getMonth() + 1) || Gruen.tipps[0];
+        return tipp ? U.el('div', { class: 'tipp' }, U.el('div', { class: 'etikett', text: 'Tipp für den ' + U.MONATE[jetzt.getMonth()] }), U.el('h3', { text: tipp.titel }), U.el('p', { text: tipp.text }),
+          tipp.thema ? U.el('button', { class: 'btn klein ghost', style: { marginTop: '10px' }, text: 'Mehr dazu', onclick: () => App.oeffne(() => Wissen.thema(tipp.thema)) }) : null) : null;
+      },
+      wusstest: () => Wusstest.karte(),
+      quiz: () => Quiz.karte(),
+      vorjahr: () => {
+        const vor = Heute.vorEinemJahr();
+        if (!vor.length) return null;
+        const g = U.el('div', { class: 'galerie' });
+        vor.slice(0, 3).forEach((e) => g.append(U.el('button', { 'aria-label': 'Foto ansehen', onclick: () => App.oeffne(() => Detail.seite(e.plantId)) }, App.bild(e.fotos[0], true))));
+        return U.el('div', null, App.abschnitt('Vor einem Jahr'), U.el('div', { class: 'card' }, g, U.el('div', { class: 'muted klein', style: { marginTop: '8px' }, text: vor.slice(0, 3).map((e) => (Data.plants.get(e.plantId) || {}).name).filter((x, i, a) => a.indexOf(x) === i).join(', ') + ' · ' + U.datum(vor[0].datum) })));
+      },
+      lexikon: () => {
+        if (!Gruen.arten.length) return null;
+        const a = Gruen.arten[(U.num(U.heute()) * 7) % Gruen.arten.length];
+        const k = U.el('button', { class: 'tagespflanze', onclick: () => App.oeffne(() => Lexikon.detail(a.id)) });
+        const [c1, c2] = Lexikon.farbe(a.kat);
+        if (Gruen.bild(a.id)) k.append(App.artBild(a.id, 'tp-bild', a.name), U.el('div', { class: 'schleier' }));
+        else k.style.background = 'linear-gradient(150deg,' + c1 + ',' + c2 + ')';
+        k.append(U.el('div', { class: 'tp-text' }, U.el('div', { class: 'etikett', text: 'Pflanze des Tages' }), U.el('h3', { text: a.name }), U.el('div', { class: 'latein', text: a.latein }), U.el('span', { class: 'pillen' }, App.pille(Gruen.SELTEN[a.selten], 'grau'))));
+        return U.el('div', null, App.abschnitt('Aus dem Lexikon'), k);
+      },
+      zuletzt: () => {
+        const letzte5 = [...Data.entries.values()].filter((e) => (Data.plants.get(e.plantId) || {}).kind === 'zimmer').sort((a, b) => (a.datum < b.datum ? 1 : a.datum > b.datum ? -1 : b.ts - a.ts)).slice(0, 5);
+        if (!letzte5.length) return null;
+        const k = U.el('div', { class: 'card flach' });
+        letzte5.forEach((e) => {
+          const p = Data.plants.get(e.plantId), d = Gruen.KINDER.zimmer.typen[e.typ] || { label: e.typ, icon: 'stift' };
+          k.append(U.el('button', { class: 'zeile', onclick: () => App.oeffne(() => Detail.seite(p.id)) }, App.icon(d.icon), U.el('div', { class: 't' }, U.el('b', { text: p.name + ' · ' + d.label }), U.el('span', { text: U.rel(e.datum) + (e.text ? ' · ' + e.text.slice(0, 60) : '') }))));
+        });
+        return U.el('div', null, App.abschnitt('Zuletzt'), k);
+      },
+    };
+    for (const id of plan.order) {
+      if (plan.off.includes(id)) continue;
+      let k = null;
+      try { k = bau[id](); } catch (e) { console.error('Widget ' + id, e); }
+      if (k) w.append(k);
     }
+    return { titel: Heute.gruss(), sub: U.wochentag(U.heute()) + ', ' + U.datum(U.heute()), inhalt: w, aktionen: [
+      { icon: 'regler', label: 'Startseite anpassen', fn: () => App.oeffne(() => Heute.anpassen()) },
+      { icon: 'plus', label: 'Neue Pflanze', fn: () => Formen.pflanze('zimmer', null, (p) => { App.tab('sammlung'); App.oeffne(() => Detail.seite(p.id)); }) }] };
+  },
 
-    // Pflanze des Tages
-    if (Gruen.arten.length) {
-      const a = Gruen.arten[(U.num(U.heute()) * 7) % Gruen.arten.length];
-      w.append(App.abschnitt('Aus dem Lexikon'), U.el('div', { class: 'card flach' }, Lexikon.zeile(a)));
-    }
-
-    // Zuletzt
-    const letzte5 = [...Data.entries.values()].filter((e) => (Data.plants.get(e.plantId) || {}).kind === 'zimmer').sort((a, b) => (a.datum < b.datum ? 1 : a.datum > b.datum ? -1 : b.ts - a.ts)).slice(0, 5);
-    if (letzte5.length) {
-      const k = U.el('div', { class: 'card flach' });
-      letzte5.forEach((e) => {
-        const p = Data.plants.get(e.plantId), d = Gruen.KINDER.zimmer.typen[e.typ] || { label: e.typ, icon: 'stift' };
-        k.append(U.el('button', { class: 'zeile', onclick: () => App.oeffne(() => Detail.seite(p.id)) }, App.icon(d.icon), U.el('div', { class: 't' }, U.el('b', { text: p.name + ' · ' + d.label }), U.el('span', { text: U.rel(e.datum) + (e.text ? ' · ' + e.text.slice(0, 60) : '') }))));
-      });
-      w.append(App.abschnitt('Zuletzt'), k);
-    }
-    return { titel: Heute.gruss(), sub: U.wochentag(U.heute()) + ', ' + U.datum(U.heute()), inhalt: w, aktionen: [{ icon: 'plus', label: 'Neue Pflanze', fn: () => Formen.pflanze('zimmer', null, (p) => { App.tab('sammlung'); App.oeffne(() => Detail.seite(p.id)); }) }] };
+  /** „Startseite anpassen“: Widgets ein-/ausblenden und verschieben */
+  anpassen() {
+    const plan = Heute.widgetPlan();
+    const w = U.el('div');
+    const speichern = () => { Einst.set('heuteWidgets', plan); App.neu(); };
+    w.append(U.el('p', { class: 'muted', style: { margin: '2px 2px 12px' }, text: 'Wähle, was auf deiner Startseite erscheint, und bring es in deine Reihenfolge.' }));
+    const k = U.el('div', { class: 'card flach' });
+    plan.order.forEach((id, i) => {
+      const d = Heute.WIDGETS.find((x) => x.id === id);
+      const an = !plan.off.includes(id);
+      const sw = U.el('span', { class: 'sw' + (an ? ' an' : '') });
+      k.append(U.el('div', { class: 'zeile', style: { cursor: 'default' } },
+        U.el('button', { class: 'wtog', role: 'switch', 'aria-checked': an ? 'true' : 'false', 'aria-label': d.label, onclick: () => { if (an) plan.off.push(id); else plan.off = plan.off.filter((x) => x !== id); speichern(); } },
+          U.el('div', { class: 't' }, U.el('b', { text: d.label }), U.el('span', { text: d.text })), sw),
+        U.el('button', { class: 'ib', 'aria-label': 'Nach oben', disabled: i === 0, onclick: () => { [plan.order[i - 1], plan.order[i]] = [plan.order[i], plan.order[i - 1]]; speichern(); } }, App.icon('hoch')),
+        U.el('button', { class: 'ib', 'aria-label': 'Nach unten', disabled: i === plan.order.length - 1, onclick: () => { [plan.order[i + 1], plan.order[i]] = [plan.order[i], plan.order[i + 1]]; speichern(); } }, App.icon('runter'))));
+    });
+    w.append(k, U.el('div', { style: { marginTop: '16px' } }, U.el('button', { class: 'btn ghost voll', text: 'Standard wiederherstellen', onclick: () => { Einst.del('heuteWidgets'); App.neu(); } })));
+    return { titel: 'Startseite anpassen', zurueck: true, inhalt: w };
   },
 
   /** Einträge mit Foto von vor etwa einem Jahr (±5 Tage) */
@@ -3314,6 +3683,7 @@ const Detail = {
     const hero = U.el('div', { class: 'hero' }, U.el('div', { class: 'verlauf' }));
     hero.prepend(App.titelbild(p, false));
     if (fotos.length) hero.firstChild.style.cursor = 'zoom-in';
+    if (!p.titelFoto && art && Gruen.bild(art.id) && p.kind !== 'cannabis') hero.append(U.el('span', { class: 'bsp-tag', text: 'Beispielfoto' }));
     hero.addEventListener('click', (ev) => { if (!ev.target.closest('.foto-knopf') && fotos.length) Detail.lupe(p, fotos, 0); });
     hero.append(U.el('button', { class: 'foto-knopf', onclick: () => Detail.schnellFoto(p) }, App.icon('kamera'), fotos.length ? 'Foto hinzufügen' : 'Erstes Foto'));
     w.append(hero);
@@ -3575,7 +3945,7 @@ const Lexikon = {
 
   zeile(a) {
     const [c1, c2] = Lexikon.farbe(a.kat);
-    const kachel = U.el('div', { class: 'kachel-k' }, App.icon(ICON_LEXIKON_KAT[a.kat] || 'blatt'));
+    const kachel = U.el('div', { class: 'kachel-k' }, Gruen.bild(a.id) ? App.artBild(a.id, '', a.name) : App.icon(ICON_LEXIKON_KAT[a.kat] || 'blatt'));
     kachel.style.background = 'linear-gradient(135deg,' + c1 + ',' + c2 + ')'; kachel.style.color = '#fff';
     const r = U.el('div', { class: 'r' }, App.punkte(a.selten));
     const n = Lexikon.besitz(a.id).length;
@@ -3583,6 +3953,17 @@ const Lexikon = {
     else if (Data.wunsch().includes(a.id)) r.append(U.el('span', { class: 'eigen', text: '♥ Wunschliste' }));
     return U.el('button', { class: 'lex', onclick: () => App.oeffne(() => Lexikon.detail(a.id)) }, kachel,
       U.el('div', { class: 't' }, U.el('b', { text: a.name }), U.el('i', { text: a.latein === a.name ? a.kat : a.latein })), r);
+  },
+
+  /** Kachel für die Rasteransicht: großes Foto, Name, Seltenheit */
+  kachel(a) {
+    const [c1, c2] = Lexikon.farbe(a.kat);
+    const bild = Gruen.bild(a.id) ? App.artBild(a.id, '', a.name) : (() => { const d = U.el('div', { class: 'ph' }, App.icon(ICON_LEXIKON_KAT[a.kat] || 'blatt')); d.style.background = 'linear-gradient(135deg,' + c1 + ',' + c2 + ')'; d.style.color = '#fff'; return d; })();
+    const k = U.el('button', { class: 'kachel lexk', onclick: () => App.oeffne(() => Lexikon.detail(a.id)) }, bild);
+    const n = Lexikon.besitz(a.id).length;
+    if (n || Data.wunsch().includes(a.id)) k.append(U.el('span', { class: 'marke pillen' }, App.pille(n ? 'Du hast' : 'Wunsch', n ? '' : 'clay', n ? 'haken' : 'herz')));
+    k.append(U.el('div', { class: 'info' }, U.el('span', { class: 'name', text: a.name }), U.el('span', { class: 'art' }, App.punkte(a.selten), ' ' + Gruen.SELTEN[a.selten])));
+    return k;
   },
 
   filtern() {
@@ -3609,12 +3990,16 @@ const Lexikon = {
       const l = Lexikon.filtern();
       out.replaceChildren();
       if (!l.length) { out.append(App.leer(z.f === 'wunsch' ? 'herz' : 'suche', z.f === 'wunsch' ? 'Wunschliste ist leer' : 'Nichts gefunden', z.f === 'wunsch' ? 'Tippe in einem Lexikon-Eintrag auf das Herz.' : 'Andere Schreibweise oder lateinischer Name?')); return; }
-      out.append(U.el('div', { class: 'muted klein', style: { margin: '2px 2px 8px' }, text: U.plural(l.length, 'Art', 'Arten') }), U.el('div', { class: 'card flach' }, l.map((a) => Lexikon.zeile(a))));
+      out.append(U.el('div', { class: 'muted klein', style: { margin: '2px 2px 8px' }, text: U.plural(l.length, 'Art', 'Arten') }),
+        Einst.get('lexAnsicht', 'liste') === 'raster' ? U.el('div', { class: 'gitter' }, l.map((a) => Lexikon.kachel(a))) : U.el('div', { class: 'card flach' }, l.map((a) => Lexikon.zeile(a))));
     };
     si.addEventListener('input', () => { z.q = si.value; zeichne(); });
     w.append(U.el('div', { class: 'suche' }, App.icon('suche'), si), chips, out);
     zeichneChips(); zeichne();
-    return { titel: 'Lexikon', sub: Gruen.arten.length + ' Pflanzen · von häufig bis Sammlerstück', inhalt: w };
+    const raster = Einst.get('lexAnsicht', 'liste') === 'raster';
+    return { titel: 'Lexikon', sub: Gruen.arten.length + ' Pflanzen', inhalt: w, aktionen: [
+      { icon: 'stern', label: 'Zufällige Pflanze', fn: () => { const a = Gruen.arten[Math.floor(Math.random() * Gruen.arten.length)]; App.oeffne(() => Lexikon.detail(a.id)); } },
+      { icon: raster ? 'lexikon' : 'bild', label: raster ? 'Als Liste zeigen' : 'Als Fotos zeigen', fn: () => { Einst.set('lexAnsicht', raster ? 'liste' : 'raster'); App.neu(); } }] };
   },
 
   detail(id) {
@@ -3625,8 +4010,14 @@ const Lexikon = {
     const hero = U.el('div', { class: 'lexhero' }, U.el('h1', { text: a.name }), U.el('div', { class: 'latein', text: a.latein }),
       U.el('div', { class: 'pillen' }, U.el('span', { class: 'pille' }, App.punkte(a.selten), ' ' + Gruen.SELTEN[a.selten]), U.el('span', { class: 'pille', text: a.kat }), U.el('span', { class: 'pille', text: Gruen.SCHWER[a.schwer] })));
     hero.style.background = 'linear-gradient(150deg,' + c1 + ',' + c2 + ')';
-    const gross = App.icon(ICON_LEXIKON_KAT[a.kat] || 'blatt'); gross.setAttribute('class', 'gross'); hero.prepend(gross);
-    w.append(hero, U.el('p', { class: 'lead', text: a.kurz }));
+    const foto = Gruen.bild(a.id);
+    if (foto) {
+      hero.classList.add('mitfoto');
+      hero.prepend(App.artBild(a.id, 'lexfoto', a.name), U.el('div', { class: 'schleier' }));
+    } else { const gross = App.icon(ICON_LEXIKON_KAT[a.kat] || 'blatt'); gross.setAttribute('class', 'gross'); hero.prepend(gross); }
+    w.append(hero);
+    if (foto) w.append(U.el('div', { class: 'bildnachweis muted klein' }, 'Foto: ' + foto.urheber + ' · ', U.el('a', { href: foto.lizenzUrl || foto.seite, target: '_blank', rel: 'noopener noreferrer', text: foto.lizenz }), ' · ', U.el('a', { href: foto.seite, target: '_blank', rel: 'noopener noreferrer', text: 'Wikimedia Commons' })));
+    w.append(U.el('p', { class: 'lead', text: a.kurz }));
     if (a.alias && a.alias.length) w.append(U.el('p', { class: 'muted klein', style: { margin: '0 2px 8px' }, text: 'Auch: ' + a.alias.join(', ') }));
     if (a.selten >= 3) w.append(U.el('div', { class: 'box warn' }, U.el('b', { text: Gruen.SELTEN[a.selten] }), Gruen.SELTEN_INFO[a.selten]));
 
@@ -3658,6 +4049,267 @@ const Lexikon = {
 };
 App.tabBauer.lexikon = () => Lexikon.seite();
 //# sourceURL=js/lexikon.js
+</script>
+<script>
+/* GRUENZEUG – Zusatzfunktionen: Pflegeplan (+ Kalender-Erinnerungen als .ics), Pflege-Serie, Erfolge, Pflanzen-Quiz,
+   „Wusstest du?“, Bildnachweis. Alles wird aus den vorhandenen Daten gerechnet; gespeichert wird nur der Quiz-Stand
+   in Einst ('quizBest', 'quizRichtig'). */
+const Plan = {
+  /** Fälligkeiten der nächsten `tage` Tage: [{d: 'YYYY-MM-DD', items: [{p, typ}]}]. Überfälliges landet auf heute. */
+  tage(tage) {
+    const aus = [];
+    for (let i = 0; i < tage; i++) aus.push({ d: U.plusTage(U.heute(), i), items: [] });
+    for (const p of Data.liste('zimmer', 'aktiv')) {
+      for (const typ of ['giessen', 'duengen']) {
+        const n = Pflege.naechste(p, typ);
+        if (!n) continue;
+        const iv = typ === 'giessen' ? p.giessTage : p.duengerTage;
+        for (let t = Math.max(n.in, 0); t < tage; t += iv) aus[t].items.push({ p, typ, ueber: n.in < 0 && t === 0 });
+      }
+    }
+    return aus;
+  },
+
+  /** Eine Zeile je Pflanze und Aufgabe */
+  zeile(x) {
+    return U.el('button', { class: 'zeile', onclick: () => App.oeffne(() => Detail.seite(x.p.id)) },
+      U.el('span', { class: 'mini-thumb' }, App.titelbild(x.p, true)),
+      U.el('div', { class: 't' }, U.el('b', { text: x.p.name }), U.el('span', { text: (x.typ === 'giessen' ? 'Gießen' : 'Düngen') + (x.ueber ? ' · überfällig' : '') })),
+      App.icon(x.typ === 'giessen' ? 'tropfen' : 'flasche'));
+  },
+
+  /** Streifen für „Heute“: 7 Tage mit Anzahl der Aufgaben */
+  streifen() {
+    const t = Plan.tage(7);
+    if (!t.some((x) => x.items.length)) return null;
+    const w = U.el('div', { class: 'woche' });
+    t.forEach((x, i) => {
+      const n = x.items.length;
+      const [y, m, d] = x.d.split('-').map(Number);
+      w.append(U.el('button', { class: 'tag' + (i === 0 ? ' heute' : '') + (n ? ' voll' : ''), 'aria-label': U.wochentag(x.d) + ', ' + n + ' Aufgaben',
+        onclick: () => { if (!n) { App.toast(U.wochentag(x.d) + ': nichts zu tun'); return; } App.sheet({ titel: i === 0 ? 'Heute' : U.wochentag(x.d) + ', ' + U.datum(x.d, true), inhalt: U.el('div', { class: 'card flach' }, x.items.map(Plan.zeile)) }); } },
+        U.el('span', { class: 'wt', text: U.WOCHENTAGE[new Date(y, m - 1, d).getDay()].slice(0, 2) }),
+        U.el('span', { class: 'dn', text: String(d) }),
+        U.el('span', { class: 'zl' }, n ? App.icon('tropfen') : null, n ? String(n) : '·')));
+    });
+    return U.el('div', { class: 'card' }, w);
+  },
+
+  seite() {
+    const w = U.el('div');
+    const t = Plan.tage(14);
+    const nix = !t.some((x) => x.items.length);
+    if (nix) w.append(App.leer('heute', 'Noch kein Pflegeplan', 'Trage bei deinen Pflanzen ein, wie oft sie gegossen oder gedüngt werden – dann entsteht hier dein Plan.'));
+    else {
+      w.append(U.el('div', { class: 'btnreihe', style: { margin: '4px 0 6px' } }, U.el('button', { class: 'btn sekundaer', onclick: () => Plan.ics() }, App.icon('teilen'), 'Als Kalender-Erinnerungen')));
+      w.append(U.el('p', { class: 'hinweis', style: { margin: '0 2px 10px' }, text: 'Die Erinnerungen landen im Kalender deines Handys und melden sich morgens um 9 Uhr – auch ohne geöffnete App.' }));
+      for (const x of t) {
+        if (!x.items.length) continue;
+        w.append(App.abschnitt(x.d === U.heute() ? 'Heute' : x.d === U.plusTage(U.heute(), 1) ? 'Morgen' : U.wochentag(x.d) + ', ' + U.datum(x.d, true)), U.el('div', { class: 'card flach' }, x.items.map(Plan.zeile)));
+      }
+    }
+    return { titel: 'Pflegeplan', sub: 'Die nächsten 14 Tage', zurueck: true, inhalt: w };
+  },
+
+  /** iCalendar-Datei: je Pflanze eine wiederkehrende Gieß- (und Dünge-)Erinnerung, Alarm um 9 Uhr */
+  async ics() {
+    const esc = (s) => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+    const kompakt = (iso) => iso.replace(/-/g, '');
+    const jetzt = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+    const z = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Gruenzeug//Pflegeplan//DE', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Gruenzeug Pflege'];
+    let n = 0;
+    for (const p of Data.liste('zimmer', 'aktiv')) {
+      for (const typ of ['giessen', 'duengen']) {
+        const f = Pflege.naechste(p, typ);
+        if (!f) continue;
+        const iv = typ === 'giessen' ? p.giessTage : p.duengerTage;
+        const start = U.plusTage(U.heute(), Math.max(f.in, 0));
+        z.push('BEGIN:VEVENT', 'UID:' + p.id + '-' + typ + '@gruenzeug', 'DTSTAMP:' + jetzt, 'DTSTART;VALUE=DATE:' + kompakt(start), 'DTEND;VALUE=DATE:' + kompakt(U.plusTage(start, 1)),
+          'RRULE:FREQ=DAILY;INTERVAL=' + iv, 'SUMMARY:' + esc((typ === 'giessen' ? 'Gießen: ' : 'Düngen: ') + p.name), 'TRANSP:TRANSPARENT',
+          'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc(p.name), 'TRIGGER;RELATED=START:PT9H', 'END:VALARM', 'END:VEVENT');
+        n++;
+      }
+    }
+    z.push('END:VCALENDAR');
+    if (!n) { App.toast('Keine Pflanze mit Pflege-Rhythmus'); return; }
+    const blob = new Blob([z.join('\r\n') + '\r\n'], { type: 'text/calendar' });
+    const r = await Sicherung.speichern(blob, 'gruenzeug-pflege.ics', 'text/calendar');
+    if (r !== 'abgebrochen') App.toast(n + ' Erinnerungen exportiert – in „Kalender“ öffnen und hinzufügen', 5000);
+  },
+};
+
+const Serie = {
+  /** Tage mit mindestens einem Eintrag (Zimmerpflanzen) */
+  tage() {
+    const s = new Set();
+    for (const e of Data.entries.values()) if ((Data.plants.get(e.plantId) || {}).kind === 'zimmer') s.add(e.datum);
+    return s;
+  },
+  /** {aktuell, beste}: Tage in Folge mit Eintrag; heute darf noch fehlen */
+  rechne() {
+    const s = Serie.tage();
+    let d = U.heute(), aktuell = 0;
+    if (!s.has(d)) d = U.plusTage(d, -1);
+    while (s.has(d)) { aktuell++; d = U.plusTage(d, -1); }
+    let beste = 0, lauf = 0, vorher = null;
+    for (const x of [...s].sort()) { lauf = vorher && U.tageZwischen(vorher, x) === 1 ? lauf + 1 : 1; beste = Math.max(beste, lauf); vorher = x; }
+    return { aktuell, beste, tage: s };
+  },
+  /** Karte für „Heute“ */
+  karte() {
+    if (!Data.liste('zimmer', 'aktiv').length) return null;
+    const r = Serie.rechne();
+    const punkte = U.el('div', { class: 'serie-tage' });
+    for (let i = 6; i >= 0; i--) { const d = U.plusTage(U.heute(), -i); punkte.append(U.el('i', { class: r.tage.has(d) ? 'an' : '', title: U.wochentag(d) }, U.el('span', { text: U.wochentag(d).slice(0, 2) }))); }
+    return U.el('button', { class: 'card serie', onclick: () => App.oeffne(() => Erfolge.seite()) },
+      U.el('div', { class: 'serie-zahl' }, U.el('b', { text: String(r.aktuell) }), U.el('span', { text: r.aktuell === 1 ? 'Tag in Folge' : 'Tage in Folge' })),
+      U.el('div', { class: 'serie-r' }, U.el('div', { class: 'etikett', text: 'Dein Pflege-Rhythmus' }), punkte, U.el('div', { class: 'muted klein', text: r.aktuell ? 'Bestmarke: ' + r.beste + (r.beste === 1 ? ' Tag' : ' Tage') : 'Ein Eintrag heute startet deine Serie.' })));
+  },
+};
+
+const Erfolge = {
+  /** Liste der Abzeichen: {id, titel, text, icon, wert, ziel} */
+  liste() {
+    const alle = Data.liste('zimmer'), aktive = alle.filter((p) => p.status === 'aktiv');
+    const eintr = [...Data.entries.values()].filter((e) => (Data.plants.get(e.plantId) || {}).kind === 'zimmer');
+    const fotos = eintr.reduce((s, e) => s + (e.fotos || []).length, 0);
+    const raritaeten = new Set(aktive.map((p) => p.artId).filter((id) => { const a = id && Gruen.artById(id); return a && a.selten >= 3; })).size;
+    const arten = new Set(aktive.map((p) => p.artId || U.norm(p.art || p.name))).size;
+    const messungen = eintr.filter((e) => e.typ === 'wachstum').length;
+    const beste = Serie.rechne().beste;
+    const quiz = Einst.get('quizRichtig', 0);
+    const cloud = Sync.angemeldet() ? 1 : 0, gesichert = Einst.get('letzteSicherung', null) ? 1 : 0;
+    const b = (id, titel, text, icon, wert, ziel) => ({ id, titel, text, icon, wert: Math.min(wert, ziel), ziel });
+    return [
+      b('erste', 'Erste Pflanze', 'Lege eine Pflanze an.', 'sammlung', aktive.length, 1),
+      b('fuenf', 'Kleine Ecke', '5 Pflanzen in der Sammlung.', 'sammlung', aktive.length, 5),
+      b('fuenfzehn', 'Urwald im Wohnzimmer', '15 Pflanzen in der Sammlung.', 'blatt', aktive.length, 15),
+      b('dreissig', 'Botanischer Garten', '30 Pflanzen in der Sammlung.', 'blatt', aktive.length, 30),
+      b('arten', 'Artenvielfalt', '8 verschiedene Arten.', 'lexikon', arten, 8),
+      b('rar', 'Sammlerglück', 'Eine seltene Pflanze besitzen.', 'stern', raritaeten, 1),
+      b('rar3', 'Raritäten-Regal', '3 seltene Arten besitzen.', 'stern', raritaeten, 3),
+      b('foto10', 'Fotograf', '10 Fotos.', 'kamera', fotos, 10),
+      b('foto50', 'Fotoalbum', '50 Fotos.', 'bild', fotos, 50),
+      b('tag25', 'Tagebuch', '25 Einträge.', 'stift', eintr.length, 25),
+      b('tag100', 'Chronist', '100 Einträge.', 'stift', eintr.length, 100),
+      b('serie3', 'Dranbleiben', '3 Tage in Folge einen Eintrag.', 'tropfen', beste, 3),
+      b('serie7', 'Wochenserie', '7 Tage in Folge.', 'tropfen', beste, 7),
+      b('serie30', 'Grüner Daumen', '30 Tage in Folge.', 'tropfen', beste, 30),
+      b('mess', 'Wachstumsforscher', '5 Messungen eingetragen.', 'lineal', messungen, 5),
+      b('quiz', 'Pflanzenkenner', '10 Quizfragen richtig.', 'wissen', quiz, 10),
+      b('quiz50', 'Botaniker', '50 Quizfragen richtig.', 'wissen', quiz, 50),
+      b('sicher', 'Vorsorge', 'Sicherung erstellt oder Cloud-Sync eingerichtet.', 'schild', Math.max(cloud, gesichert), 1),
+    ];
+  },
+  seite() {
+    const l = Erfolge.liste(), fertig = l.filter((x) => x.wert >= x.ziel);
+    const w = U.el('div');
+    w.append(U.el('div', { class: 'card' }, U.el('div', { class: 'etikett', text: 'Abzeichen' }), U.el('div', { style: { fontFamily: 'var(--serif)', fontSize: '30px', fontWeight: 600 }, text: fertig.length + ' von ' + l.length }),
+      U.el('div', { class: 'balken' }, U.el('i', { style: { width: (fertig.length / l.length * 100) + '%' } }))));
+    const g = U.el('div', { class: 'abzeichen' });
+    for (const x of l) {
+      const ok = x.wert >= x.ziel;
+      g.append(U.el('div', { class: 'abz' + (ok ? ' ok' : '') },
+        U.el('span', { class: 'sym' }, App.icon(ok ? x.icon : 'schloss')),
+        U.el('b', { text: x.titel }), U.el('span', { class: 'muted klein', text: x.text }),
+        ok ? null : U.el('div', { class: 'balken klein' }, U.el('i', { style: { width: (x.wert / x.ziel * 100) + '%' } })),
+        ok ? null : U.el('span', { class: 'muted klein', text: x.wert + ' / ' + x.ziel })));
+    }
+    w.append(g);
+    return { titel: 'Erfolge', sub: 'Deine Abzeichen', zurueck: true, inhalt: w };
+  },
+};
+
+const Quiz = {
+  z: null,   // {fragen: [{art, opt: [artId], antwort: artId|null}], i, richtig, fertig}
+  neu() {
+    const mit = Gruen.arten.filter((a) => Gruen.bild(a.id));
+    const mische = (l) => { l = l.slice(); for (let i = l.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [l[i], l[j]] = [l[j], l[i]]; } return l; };
+    const art2 = (a) => a.latein.split(' ').slice(0, 2).join(' ');
+    const fragen = mische(mit).slice(0, 10).map((a) => {
+      const echt = Gruen.arten.filter((x) => x.id !== a.id && art2(x) !== art2(a));
+      const gleich = mische(echt.filter((x) => x.kat === a.kat)), rest = mische(echt.filter((x) => x.kat !== a.kat));
+      const opt = mische([a, ...gleich.concat(rest).slice(0, 3)]).map((x) => x.id);
+      return { art: a.id, opt, antwort: null };
+    });
+    Quiz.z = { fragen, i: 0, richtig: 0, fertig: false };
+  },
+  seite() {
+    if (!Quiz.z) Quiz.neu();
+    const z = Quiz.z, w = U.el('div');
+    if (z.fertig) {
+      const best = Einst.get('quizBest', 0);
+      w.append(U.el('div', { class: 'card', style: { textAlign: 'center', padding: '28px 16px' } }, App.icon('stern', 44), U.el('div', { style: { fontFamily: 'var(--serif)', fontSize: '44px', fontWeight: 600 }, text: z.richtig + ' / ' + z.fragen.length }),
+        U.el('p', { class: 'muted', text: z.richtig >= 9 ? 'Meisterhaft – du kennst deine Pflanzen!' : z.richtig >= 6 ? 'Stark! Da geht noch mehr.' : 'Schau öfter ins Lexikon, dann klappt es.' }),
+        U.el('p', { class: 'muted klein', text: 'Beste Runde: ' + best + ' / ' + z.fragen.length }),
+        U.el('div', { class: 'btnreihe' }, U.el('button', { class: 'btn', text: 'Nochmal', onclick: () => { Quiz.neu(); App.neu(); } }), U.el('button', { class: 'btn ghost', text: 'Fertig', onclick: () => App.zurueck() }))));
+      return { titel: 'Pflanzen-Quiz', zurueck: true, inhalt: w };
+    }
+    const f = z.fragen[z.i], richtig = Gruen.artById(f.art);
+    w.append(U.el('div', { class: 'muted klein', style: { margin: '0 2px 8px' }, text: 'Frage ' + (z.i + 1) + ' von ' + z.fragen.length + ' · ' + z.richtig + ' richtig' }),
+      U.el('div', { class: 'quizbild' }, App.artBild(f.art, '', richtig.name)));
+    const opts = U.el('div', { class: 'quizopt' });
+    for (const id of f.opt) {
+      const a = Gruen.artById(id);
+      const stand = f.antwort == null ? '' : id === f.art ? ' richtig' : id === f.antwort ? ' falsch' : ' aus';
+      opts.append(U.el('button', { class: 'btn ghost voll' + stand, disabled: f.antwort != null, onclick: () => {
+        f.antwort = id;
+        if (id === f.art) { z.richtig++; Einst.set('quizRichtig', Einst.get('quizRichtig', 0) + 1); }
+        App.neu();
+      } }, a.name));
+    }
+    w.append(U.el('h3', { text: 'Welche Pflanze ist das?', style: { margin: '14px 2px 8px' } }), opts);
+    if (f.antwort != null) {
+      const ok = f.antwort === f.art;
+      w.append(U.el('div', { class: 'box' + (ok ? '' : ' warn'), style: { marginTop: '12px' } }, U.el('b', { text: ok ? 'Richtig!' : 'Leider nicht – das ist: ' + richtig.name }), richtig.kurz),
+        U.el('div', { class: 'btnreihe' },
+          U.el('button', { class: 'btn', text: z.i + 1 < z.fragen.length ? 'Weiter' : 'Ergebnis', onclick: () => {
+            if (z.i + 1 < z.fragen.length) z.i++; else { z.fertig = true; if (z.richtig > Einst.get('quizBest', 0)) Einst.set('quizBest', z.richtig); }
+            App.neu();
+          } }),
+          U.el('button', { class: 'btn ghost', text: 'Im Lexikon', onclick: () => App.oeffne(() => Lexikon.detail(f.art)) })));
+    }
+    return { titel: 'Pflanzen-Quiz', zurueck: true, inhalt: w };
+  },
+  oeffnen() { Quiz.neu(); App.oeffne(() => Quiz.seite()); },
+  karte() {
+    if (Gruen.arten.filter((a) => Gruen.bild(a.id)).length < 8) return null;
+    const best = Einst.get('quizBest', null);
+    return U.el('button', { class: 'card quizkarte', onclick: () => Quiz.oeffnen() },
+      U.el('span', { class: 'sym' }, App.icon('frage')),
+      U.el('div', { class: 't' }, U.el('b', { text: 'Pflanzen-Quiz' }), U.el('span', { class: 'muted klein', text: best == null ? 'Erkennst du die Pflanze auf dem Foto?' : 'Beste Runde: ' + best + ' / 10' })), App.icon('weiter'));
+  },
+};
+
+const Wusstest = {
+  /** Tagesfakt aus den „Besonderheiten“ der Lexikon-Einträge */
+  karte() {
+    const mit = Gruen.arten.filter((a) => a.besonders && a.besonders.length);
+    if (!mit.length) return null;
+    const h = U.hash(U.heute());
+    const a = mit[h % mit.length], fakt = a.besonders[(h >> 3) % a.besonders.length];
+    return U.el('button', { class: 'card wusstest', onclick: () => App.oeffne(() => Lexikon.detail(a.id)) },
+      Gruen.bild(a.id) ? U.el('span', { class: 'wb' }, App.artBild(a.id, '', a.name)) : null,
+      U.el('div', { class: 't' }, U.el('div', { class: 'etikett', text: 'Wusstest du? · ' + a.name }), U.el('p', { text: fakt })));
+  },
+};
+
+const Bildnachweis = {
+  seite() {
+    const w = U.el('div');
+    const l = Gruen.arten.filter((a) => Gruen.bild(a.id));
+    w.append(U.el('div', { class: 'box' }, U.el('b', { text: 'Fotos aus Wikimedia Commons' }), 'Die Beispielfotos im Lexikon stammen von freien Fotografinnen und Fotografen (Lizenzen CC BY, CC BY-SA, CC0 oder gemeinfrei) und sind für die App verkleinert. Danke an alle, die sie geteilt haben.'));
+    w.append(U.el('div', { class: 'card flach' }, l.map((a) => {
+      const b = Gruen.bild(a.id);
+      return U.el('div', { class: 'zeile', style: { cursor: 'default', alignItems: 'flex-start' } },
+        U.el('span', { class: 'mini-thumb' }, App.artBild(a.id, '', a.name)),
+        U.el('div', { class: 't' }, U.el('b', { text: a.name }),
+          U.el('span', { text: b.urheber + ' · ' }, U.el('a', { href: b.lizenzUrl || b.seite, target: '_blank', rel: 'noopener noreferrer', text: b.lizenz }), ' · ', U.el('a', { href: b.seite, target: '_blank', rel: 'noopener noreferrer', text: 'Quelle' }))));
+    })));
+    return { titel: 'Bildnachweis', zurueck: true, inhalt: w };
+  },
+};
+//# sourceURL=js/extras.js
 </script>
 <script>
 /* GRUENZEUG – Wissen: Pflege-Grundlagen, Schädlinge, Diagnose (Symptom → Ursachen). Inhalte in content/. */
@@ -3759,8 +4411,8 @@ const Privat = {
     let cfg;
     if (Krypto.ok()) {
       const salt = Krypto.neuesSalz();
-      const key = await Krypto.ableiten(pin, salt);
-      cfg = { v: 2, salt, canary: await Krypto.encMit(key, 'gruenzeug-ok'), len: pin.length, u: Date.now() };
+      const key = await Krypto.ableiten(pin, salt, Krypto.ITER_NEU);
+      cfg = { v: 2, salt, iter: Krypto.ITER_NEU, canary: await Krypto.encMit(key, 'gruenzeug-ok'), len: pin.length, u: Date.now() };
       Krypto.key = key;
     } else {
       const salt = U.uid() + U.uid();
@@ -3775,7 +4427,7 @@ const Privat = {
     if (!c) return false;
     if (c.v === 2) {
       try {
-        const key = await Krypto.ableiten(pin, c.salt);
+        const key = await Krypto.ableiten(pin, c.salt, c.iter);
         if ((await Krypto.decMit(key, c.canary)) !== 'gruenzeug-ok') return false;
         Krypto.key = key;
         return true;
@@ -3810,13 +4462,21 @@ const Privat = {
     return s;
   },
 
+  /** Nach 5 falschen PINs wächst die Wartezeit (30 s, 60 s, … bis 5 min). → Sekunden oder 0 */
+  _fehl: 0, _bis: 0,
+  fehlversuch() { if (++Privat._fehl >= 5) Privat._bis = Date.now() + Math.min(300, 30 * (Privat._fehl - 4)) * 1000; },
+  bremse() { return Date.now() < Privat._bis ? Math.ceil((Privat._bis - Date.now()) / 1000) : 0; },
+
   /** Einstieg: Bereich öffnen (mit PIN, falls gesperrt) */
   oeffnen() {
     if (!Privat.aktiv()) { App.toast('Erst in „Mehr“ → Einstellungen einrichten'); return; }
     if (Privat.offen) { Privat._zeigen(); return; }
     const c = Privat.cfg();
     Privat.pinFeld('Entsperren', 'PIN eingeben', c.len, async (pin) => {
-      if (!(await Privat.pruefen(pin))) return false;
+      const warte = Privat.bremse();
+      if (warte) { App.toast('Zu viele Versuche – bitte ' + warte + ' Sekunden warten', 3000); return false; }
+      if (!(await Privat.pruefen(pin))) { Privat.fehlversuch(); return false; }
+      Privat._fehl = 0;
       Privat.offen = true; Sync.nachEntsperren(); Privat._zeigen(); return true;
     }, U.el('button', { class: 'btn klein ghost', style: { marginTop: '18px' }, text: 'PIN vergessen?', onclick: () => Privat.zuruecksetzen() }));
   },
@@ -3892,6 +4552,9 @@ const Mehr = {
 
     w.append(U.el('div', { class: 'card flach' },
       App.zeile('Wunschliste', Data.wunsch().length ? U.plural(Data.wunsch().length, 'Pflanze', 'Pflanzen') + ' vom Lexikon gemerkt' : 'Pflanzen, die du noch haben willst', 'herz', () => { Lexikon.zustand.f = 'wunsch'; App.tab('lexikon'); }),
+      App.zeile('Pflegeplan', 'Nächste 14 Tage, Kalender-Erinnerungen', 'heute', () => App.oeffne(() => Plan.seite())),
+      App.zeile('Pflanzen-Quiz', 'Erkenne Pflanzen auf Fotos', 'frage', () => Quiz.oeffnen()),
+      App.zeile('Erfolge', Erfolge.liste().filter((x) => x.wert >= x.ziel).length + ' von ' + Erfolge.liste().length + ' Abzeichen', 'pokal', () => App.oeffne(() => Erfolge.seite())),
       App.zeile('Statistik', 'Sammlung in Zahlen', 'lineal', () => App.oeffne(() => Mehr.statistik()))));
 
     w.append(App.abschnitt('Daten'));
@@ -3901,8 +4564,12 @@ const Mehr = {
       App.zeile('Sicherung laden', 'Aus einer Gruenzeug-Datei wiederherstellen', 'ordner', () => Mehr.laden())));
 
     w.append(App.abschnitt('App'));
-    const k = U.el('div', { class: 'card flach' }, App.zeile('Einstellungen', 'Privater Bereich, Speicher', 'regler', () => App.oeffne(() => Mehr.einstellungen())));
+    const k = U.el('div', { class: 'card flach' },
+      App.zeile('Design', 'Theme, Farben, Formen, Schrift', 'palette', () => App.oeffne(() => Design.seite())),
+      App.zeile('Startseite anpassen', 'Widgets ein-/ausblenden und ordnen', 'heute', () => App.oeffne(() => Heute.anpassen())),
+      App.zeile('Einstellungen', 'Privater Bereich, Speicher', 'regler', () => App.oeffne(() => Mehr.einstellungen())));
     if (Privat.aktiv() && !Einst.get('pinVerstecken', false)) k.append(App.zeile('Privat', Privat.offen ? 'Entsperrt' : 'Mit PIN öffnen', 'schloss', () => Privat.oeffnen()));
+    k.append(App.zeile('Bildnachweis', 'Urheber der Lexikon-Fotos', 'bild', () => App.oeffne(() => Bildnachweis.seite())));
     k.append(App.zeile('Nach Update suchen', 'Version ' + (typeof GRUEN_BUILD !== 'undefined' ? GRUEN_BUILD.stamp : 'Entwicklung'), 'info', () => Updates.pruefen(true)));
     w.append(k);
 
@@ -4046,7 +4713,7 @@ const Mehr = {
         App.toast('Wird geladen …', 8000);
         try {
           const r = await Sicherung.einspielen(f, modus, (n, g) => { if (n % 10 === 0) App.toast('Fotos ' + n + ' / ' + g, 3000); });
-          App.toast('Geladen: ' + U.plural(r.pflanzen, 'Pflanze', 'Pflanzen') + ', ' + U.plural(r.fotos, 'Foto', 'Fotos'), 4000);
+          App.toast('Geladen: ' + U.plural(r.pflanzen, 'Pflanze', 'Pflanzen') + ', ' + U.plural(r.fotos, 'Foto', 'Fotos') + (r.verworfen ? ' (' + r.verworfen + ' beschädigte Einträge übersprungen)' : ''), 4000);
           App.neu();
         } catch (e) { console.error(e); App.toast('Fehler: ' + (e && e.message || e), 5000); return false; }
       } });

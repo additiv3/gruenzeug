@@ -110,6 +110,16 @@
     pruefe(!(await Privat.pruefen('4321')), 'Falsche PIN');
     gleich(Privat.cfg().len, 4, 'PIN-Länge gespeichert');
     pruefe(!JSON.stringify(Privat.cfg()).includes('1234'), 'PIN nicht im Klartext gespeichert');
+    gleich(Privat.cfg().iter, 600000, 'Neue PIN nutzt 600000 Iterationen');
+    // alter Stand ohne iter (200000) lässt sich weiter entsperren
+    const altSalz = Krypto.neuesSalz(), altKey = await Krypto.ableiten('2468', altSalz);
+    Einst.set('pin', { v: 2, salt: altSalz, canary: await Krypto.encMit(altKey, 'gruenzeug-ok'), len: 4, u: 1 });
+    pruefe(await Privat.pruefen('2468'), 'PIN aus altem Format (ohne iter) entsperrt weiter');
+    pruefe(!(await Privat.pruefen('2469')), 'Falsche PIN im alten Format wird abgelehnt');
+    Privat._fehl = 0; for (let i = 0; i < 5; i++) Privat.fehlversuch();
+    pruefe(Privat.bremse() > 0, 'Nach 5 Fehlversuchen greift die Wartezeit'); Privat._fehl = 0; Privat._bis = 0;
+    pruefe(Privat.bremse() === 0, 'Wartezeit endet');
+    await Privat.setzen('1234');
     Einst.del('pin');
   });
 
@@ -245,13 +255,93 @@
     Gruen.wissen.forEach((x) => aufrufe.push(['Thema ' + x.id, () => Wissen.thema(x.id)]));
     Gruen.schaedlinge.forEach((x) => aufrufe.push(['Schädling ' + x.id, () => Wissen.schaedling(x.id)]));
     Gruen.diagnose.forEach((x) => aufrufe.push(['Symptom ' + x.id, () => Wissen.symptom(x.id)]));
-    aufrufe.push(['Detail', () => Detail.seite(p.id)], ['Statistik', () => Mehr.statistik()], ['Einstellungen', () => Mehr.einstellungen()], ['Grow', () => Sammlung.seite('cannabis')]);
+    aufrufe.push(['Detail', () => Detail.seite(p.id)], ['Statistik', () => Mehr.statistik()], ['Einstellungen', () => Mehr.einstellungen()], ['Grow', () => Sammlung.seite('cannabis')],
+      ['Design', () => Design.seite()], ['Pflegeplan', () => Plan.seite()], ['Erfolge', () => Erfolge.seite()], ['Bildnachweis', () => Bildnachweis.seite()], ['Startseite anpassen', () => Heute.anpassen()]);
     for (const [name, fn] of aufrufe) {
       App.tab('heute');
       let d; try { d = fn(); } catch (e) { t.fails.push(name + ' wirft: ' + e.message); continue; }
       pruefe(d && typeof d.titel === 'string' && d.inhalt && d.inhalt.nodeType, name + ' liefert eine Seite');
       App.oeffne(() => d); // Seite wirklich aufbauen
     }
+    App.tab('heute');
+  });
+
+  await schritt('einspielen-pruefen', async () => {
+    const gut = { id: 'p1', kind: 'zimmer', name: 'Gut', fakten: [] };
+    const roh = { plants: [gut, { id: '../x', kind: 'zimmer', name: 'Pfad' }, { id: 'p2', kind: 'unbekannt', name: 'x' }, null, 'text', { id: 'p3', kind: 'zimmer', name: 5 }, { id: 'p4', kind: 'zimmer', name: 'Foto', titelFoto: '<img src=x>' }],
+      entries: [{ id: 'e1', plantId: 'p1', typ: 'notiz', datum: '2026-01-02', text: 'ok', fotos: ['f1'], werte: {} }, { id: 'e2', plantId: 'p1', typ: 'notiz', datum: 'gestern' }, { id: 'e3', plantId: 'p1', typ: 'notiz', datum: '2026-01-02', fotos: 'f1' }, 42],
+      photos: [{ id: 'f1' }, { id: '..\\boese' }] };
+    const r = Sicherung.pruefe(roh);
+    gleich(r.plants.length, 1, 'Nur die wohlgeformte Pflanze bleibt'); gleich(r.entries.length, 1, 'Nur der wohlgeformte Eintrag bleibt'); gleich(r.photos.length, 1, 'Nur sichere Foto-IDs bleiben');
+    gleich(r.verworfen, 9, 'Verworfene Dokumente werden gezählt');
+    gleich(Sicherung.pruefe({}).plants.length, 0, 'Leere Sicherung schadet nicht');
+  });
+
+  await schritt('design-und-extras', async () => {
+    // Design: jedes Theme in Hell und Dunkel, alle Optionen setzen sich als Attribute
+    const alt = Einst.get('design', null);
+    for (const th of Design.THEMES) for (const modus of ['hell', 'dunkel']) {
+      Design.setzen('theme', th.id); Design.setzen('modus', modus);
+      pruefe((document.documentElement.dataset.mode === 'dark') === (modus === 'dunkel'), 'Design ' + th.id + '/' + modus + ' setzt den Modus');
+      pruefe(th.id === 'feld' ? !document.documentElement.dataset.theme : document.documentElement.dataset.theme === th.id, 'Design ' + th.id + ' setzt das Theme');
+    }
+    Design.setzen('akzent', 'beere'); pruefe(!!document.documentElement.style.getPropertyValue('--accent'), 'Akzentfarbe setzt --accent');
+    Design.setzen('akzent', 'standard'); pruefe(!document.documentElement.style.getPropertyValue('--accent'), 'Akzent Standard entfernt --accent');
+    for (const [k, v] of [['ecken', 'weich'], ['ecken', 'kantig'], ['schrift', 'sans'], ['schrift', 'mono'], ['tabs', 'schwebend'], ['tabs', 'kompakt'], ['spalten', 3]]) {
+      Design.setzen(k, v); App.tab('sammlung'); await warte(20); pruefe(!document.querySelector('.box.rot'), 'Seite baut mit Design ' + k + '=' + v);
+    }
+    Einst.del('design'); if (alt) Einst.set('design', alt); Design.anwenden();
+    pruefe(Design.get().theme === (alt && alt.theme || 'feld'), 'Design zurückgesetzt');
+    Einst.set('design', { theme: 'kaputt', ecken: 5 }); pruefe(Design.get().theme === 'kaputt' && Design.get().ecken === 'rund', 'Design.get ignoriert Werte mit falschem Typ'); Einst.del('design'); Design.anwenden();
+
+    // Lexikon-Bilder: jede Bilddatei ist erreichbar
+    const mitBild = Gruen.arten.filter((a) => Gruen.bild(a.id));
+    pruefe(mitBild.length >= 40, 'Lexikon-Fotos vorhanden (' + mitBild.length + ')');
+    const kaputt = [];
+    for (const a of mitBild) { try { const r = await fetch(Gruen.bild(a.id).src); if (!r.ok || !/image/.test(r.headers.get('content-type') || '')) kaputt.push(a.id); } catch (e) { kaputt.push(a.id); } }
+    pruefe(!kaputt.length, 'Alle Lexikon-Fotos laden' + (kaputt.length ? ': ' + kaputt.join(', ') : ''));
+    pruefe(mitBild.every((a) => { const b = Gruen.bild(a.id); return b.urheber && b.lizenz && b.seite; }), 'Jedes Foto hat Urheber, Lizenz und Quelle');
+    pruefe(!!document.querySelector('meta[http-equiv="Content-Security-Policy"]') || location.protocol === 'file:', 'Content-Security-Policy gesetzt');
+
+    // Heute-Widgets: ausblenden und Reihenfolge
+    const plan = Heute.widgetPlan();
+    pruefe(plan.order.length === Heute.WIDGETS.length, 'Widget-Plan enthält alle Widgets');
+    Einst.set('heuteWidgets', { order: ['zuletzt', 'stat'], off: ['tipp', 'unbekannt'] });
+    const p2 = Heute.widgetPlan();
+    pruefe(p2.order[0] === 'zuletzt' && p2.order.length === Heute.WIDGETS.length && new Set(p2.order).size === p2.order.length, 'Widget-Plan ergänzt fehlende Widgets');
+    App.tab('heute'); await warte(20);
+    pruefe(!document.querySelector('.tipp'), 'Ausgeblendetes Widget fehlt auf Heute');
+    Einst.del('heuteWidgets'); App.tab('heute');
+
+    // Pflegeplan und Kalender-Export
+    const pf = Data.neuePflanze('zimmer', { name: 'Plan-Test', giessTage: 3, duengerTage: 14, erworben: U.plusTage(U.heute(), -1) });
+    await Data.savePlant(pf);
+    const tage = Plan.tage(7);
+    pruefe(tage.length === 7 && tage[2].items.some((x) => x.p.id === pf.id && x.typ === 'giessen'), 'Pflegeplan: Gießen in 2 Tagen');
+    pruefe(tage[5].items.some((x) => x.p.id === pf.id && x.typ === 'giessen'), 'Pflegeplan: Gießen wiederholt sich');
+    let ics = null; const altSp = Sicherung.speichern; Sicherung.speichern = async (blob) => { ics = await blob.text(); return 'geteilt'; };
+    await Plan.ics(); Sicherung.speichern = altSp;
+    pruefe(!!ics && ics.startsWith('BEGIN:VCALENDAR') && ics.includes('RRULE:FREQ=DAILY;INTERVAL=3') && ics.includes('SUMMARY:Gießen: Plan-Test') && ics.includes('TRIGGER'), 'Kalender-Datei (.ics) enthält Erinnerungen');
+    pruefe(!!ics && ics.split('\r\n').join('').indexOf('\n') === -1, 'Kalender-Datei nutzt CRLF');
+    await Data.delPlant(pf.id);
+
+    // Serie und Erfolge
+    const q = Data.neuePflanze('zimmer', { name: 'Serie-Test' }); await Data.savePlant(q);
+    for (let i = 0; i < 3; i++) await Data.saveEntry(Data.neuerEintrag(q.id, 'notiz', { datum: U.plusTage(U.heute(), -i) }));
+    const r = Serie.rechne();
+    pruefe(r.aktuell >= 3 && r.beste >= 3, 'Serie zählt drei Tage in Folge');
+    pruefe(Erfolge.liste().find((x) => x.id === 'serie3').wert >= 3, 'Erfolg „Dranbleiben“ erreicht');
+    await Data.delPlant(q.id);
+
+    // Quiz
+    Quiz.neu();
+    pruefe(Quiz.z.fragen.length === 10, 'Quiz hat 10 Fragen');
+    pruefe(Quiz.z.fragen.every((f) => f.opt.length === 4 && new Set(f.opt).size === 4 && f.opt.includes(f.art)), 'Quiz: vier verschiedene Antworten, eine richtig');
+    for (let i = 0; i < 10; i++) {
+      const f = Quiz.z.fragen[i]; f.antwort = f.art; Quiz.z.richtig++; Quiz.z.i = i;
+      const d = Quiz.seite(); pruefe(d && d.inhalt && d.inhalt.nodeType, 'Quiz Frage ' + (i + 1) + ' baut');
+    }
+    Quiz.z.fertig = true; pruefe(Quiz.seite().inhalt.textContent.includes('10 / 10'), 'Quiz-Ergebnis zeigt 10 / 10'); Quiz.z = null;
     App.tab('heute');
   });
 

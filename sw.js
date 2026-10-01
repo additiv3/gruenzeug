@@ -1,13 +1,14 @@
 /* GRUENZEUG – Service Worker: offline nutzbar, online immer die neueste Version.
-   Vorlage: tools/build.py ersetzt b7c2568-20261001234032 und schreibt dist/sw.js. */
-const CACHE = 'gruenzeug-b7c2568-20261001234032';
+   Vorlage: tools/build.py ersetzt 2c96226-20261002002919 und schreibt dist/sw.js. */
+const CACHE = 'gruenzeug-2c96226-20261002002919';
+const BILDER = 'gruenzeug-bilder';   // Lexikon-Fotos: dateiname?v=hash ändert sich mit dem Bild, bleibt über Updates erhalten
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.all(ASSETS.map((u) => c.add(new Request(u, { cache: 'reload' })).catch(() => {})))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('gruenzeug-') && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('gruenzeug-') && k !== CACHE && k !== BILDER).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 /* Netz zuerst (höchstens 4 s warten, dann Speicher): neue Version sofort da, im Funkloch startet die App trotzdem */
@@ -30,5 +31,9 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.endsWith('/version.json') || url.pathname.endsWith('/selftest.js')) return;
+  if (url.pathname.includes('/bilder/')) {
+    e.respondWith(caches.open(BILDER).then((c) => c.match(req).then((hit) => hit || fetch(req).then((res) => { if (res && res.ok) c.put(req, res.clone()).catch(() => {}); return res; }))));
+    return;
+  }
   e.respondWith(netzZuerst(req));
 });
