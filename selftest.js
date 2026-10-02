@@ -3,7 +3,7 @@
    PIN und alle Seiten, und stellt danach deine Daten wieder her. Ergebnis: window.gruenTest {fails, errors, ok}
    und ein Kasten auf der Seite. Neue Funktionen → hier ergänzen. */
 (async function selftest() {
-  const { App, Data, Gruen, Einst, Sicherung, Pflege, Privat, U, Zip, Sync, Krypto } = window.gruen;
+  const { App, Data, Gruen, Einst, Sicherung, Pflege, Privat, U, Zip, Sync, Krypto, Spiel, Kunst, Fx } = window.gruen;
   const t = { ok: 0, fails: [], errors: [], uebersprungen: [] };
   const pruefe = (b, msg) => { if (b) t.ok++; else t.fails.push(msg); };
   const gleich = (a, b, msg) => pruefe(JSON.stringify(a) === JSON.stringify(b), msg + ' – erwartet ' + JSON.stringify(b) + ', war ' + JSON.stringify(a));
@@ -154,6 +154,7 @@
       const f2 = await Data.addFoto(await bildDatei('#a62'));
       const ge1 = Data.neuerEintrag(g1.id, 'notiz', { text: 'Geheimnotiz', fotos: [f2] }); await Data.saveEntry(ge1);
       await Data.wunschSetzen('lithops', true);
+      Spiel.vergessen(); Spiel.s().name = 'Cloud-Pflänzchen'; Spiel.s().tau = 55; await Spiel.speichern(true);
 
       // Anmelden
       let fehler = null; try { await Sync.anmelden('a@b.de', 'falsch1234'); } catch (e) { fehler = e; }
@@ -165,7 +166,7 @@
       await syncen();
 
       let d = await dump(); const txt = JSON.stringify(d.docs);
-      gleich(d.docs.filter((x) => !x.deleted).length, 6, 'Erster Abgleich lädt 2 Pflanzen, 2 Einträge, Wunschliste und PIN-Daten hoch');
+      gleich(d.docs.filter((x) => !x.deleted).length, 7, 'Erster Abgleich lädt 2 Pflanzen, 2 Einträge, Wunschliste, Sprössling und PIN-Daten hoch');
       pruefe(!txt.includes('Grow-Geheim') && !txt.includes('Geheimnotiz'), 'Privater Bereich liegt nur verschlüsselt in der Cloud');
       pruefe(txt.includes('Cloud-Monty'), 'Normale Daten liegen lesbar in der Cloud');
       pruefe(d.objs.includes('u1/' + f1 + '.jpg') && d.objs.includes('u1/' + f2 + '.enc') && !d.objs.includes('u1/' + f2 + '.jpg'), 'Fotos hochgeladen, privates verschlüsselt (.enc)');
@@ -186,6 +187,7 @@
       gleich(Data.plants.get(z1.id).name, 'Cloud-Monty', 'Inhalt unverändert');
       pruefe(Data.entries.has(e1.id), 'Eintrag kommt zurück');
       pruefe(Data.wunsch().includes('lithops'), 'Wunschliste kommt zurück');
+      pruefe(Spiel.s().name === 'Cloud-Pflänzchen' && Spiel.s().tau === 55, 'Sprössling kommt aus der Cloud zurück');
       pruefe(!!(await Data.url(f1, true)), 'Foto wird beim Ansehen aus der Cloud geladen');
       gleich(Data.liste('cannabis').length, 0, 'Privater Bereich bleibt gesperrt (nichts sichtbar)');
       pruefe(Privat.aktiv(), 'PIN-Einrichtung kommt aus der Cloud');
@@ -244,7 +246,7 @@
   });
 
   await schritt('seiten', async () => {
-    for (const id of ['heute', 'sammlung', 'lexikon', 'wissen', 'mehr']) {
+    for (const id of ['heute', 'sammlung', 'spiel', 'lexikon', 'wissen', 'mehr']) {
       App.tab(id); await warte(30);
       const top = document.querySelector('.page .body');
       pruefe(!!top && top.textContent.length > 20, 'Tab ' + id + ' zeigt Inhalt');
@@ -256,7 +258,7 @@
     Gruen.schaedlinge.forEach((x) => aufrufe.push(['Schädling ' + x.id, () => Wissen.schaedling(x.id)]));
     Gruen.diagnose.forEach((x) => aufrufe.push(['Symptom ' + x.id, () => Wissen.symptom(x.id)]));
     aufrufe.push(['Detail', () => Detail.seite(p.id)], ['Statistik', () => Mehr.statistik()], ['Einstellungen', () => Mehr.einstellungen()], ['Grow', () => Sammlung.seite('cannabis')],
-      ['Design', () => Design.seite()], ['Pflegeplan', () => Plan.seite()], ['Erfolge', () => Erfolge.seite()], ['Bildnachweis', () => Bildnachweis.seite()], ['Startseite anpassen', () => Heute.anpassen()]);
+      ['Design', () => Design.seite()], ['Pflegeplan', () => Plan.seite()], ['Erfolge', () => Erfolge.seite()], ['Bildnachweis', () => Bildnachweis.seite()], ['Herbarium', () => Spiel.herbarium()], ['Laden', () => Spiel.laden()], ['Suche', () => Suche.seite()], ['Startseite anpassen', () => Heute.anpassen()]);
     for (const [name, fn] of aufrufe) {
       App.tab('heute');
       let d; try { d = fn(); } catch (e) { t.fails.push(name + ' wirft: ' + e.message); continue; }
@@ -308,7 +310,7 @@
     pruefe(plan.order.length === Heute.WIDGETS.length, 'Widget-Plan enthält alle Widgets');
     Einst.set('heuteWidgets', { order: ['zuletzt', 'stat'], off: ['tipp', 'unbekannt'] });
     const p2 = Heute.widgetPlan();
-    pruefe(p2.order[0] === 'zuletzt' && p2.order.length === Heute.WIDGETS.length && new Set(p2.order).size === p2.order.length, 'Widget-Plan ergänzt fehlende Widgets');
+    pruefe(p2.order[0] === 'spross' && p2.order[1] === 'zuletzt' && p2.order.length === Heute.WIDGETS.length && new Set(p2.order).size === p2.order.length, 'Widget-Plan ergänzt fehlende Widgets');
     App.tab('heute'); await warte(20);
     pruefe(!document.querySelector('.tipp'), 'Ausgeblendetes Widget fehlt auf Heute');
     Einst.del('heuteWidgets'); App.tab('heute');
@@ -380,6 +382,120 @@
     pruefe(l.some((a) => a.id === 'monstera-albo'), 'Lexikon-Suche findet „albo“');
     Lexikon.zustand.f = 'rar'; const r = Lexikon.filtern(); Lexikon.zustand.f = 'alle';
     pruefe(r.length > 0 && r.every((a) => a.selten >= 3), 'Filter Raritäten');
+  });
+
+  await schritt('sproessling', async () => {
+    const H = 36e5;
+    const T0 = new Date(); T0.setHours(7, 0, 0, 0); const t0 = T0.getTime() - 20 * 24 * H;   // Start vor 20 Tagen um 7 Uhr
+    const imBereich = (s) => ['wasser', 'nahrung', 'licht', 'laune'].every((k) => s[k] >= 0 && s[k] <= 100 && isFinite(s[k])) && isFinite(s.wachs);
+
+    // Frischer Zustand
+    await Data.setMeta('spiel', null); Spiel.vergessen(); let s = Spiel.s();
+    gleich([s.stufe, s.gekeimt, s.tau], [0, false, 10], 'Neuer Sprössling');
+    pruefe(!!s.tag && s.tag.quests.length === 3, 'Drei Tagesaufgaben');
+
+    // Vernachlässigt: wächst nicht, stirbt nicht, Werte bleiben im Bereich
+    s.t = t0; Spiel.tick(t0 + 200 * H);
+    pruefe(imBereich(s) && s.stufe === 0 && s.wasser === 0, 'Vernachlässigter Samen: bleibt Samen, Werte im Bereich');
+    pruefe(Math.abs(s.t - (t0 + 200 * H)) < H, 'Höchstens 96 Stunden werden nachgerechnet');
+
+    // Gute Pflege: Lampe 7–21 Uhr, gießen und düngen nach Bedarf
+    Spiel.vergessen(); s = Spiel.s(); s.t = t0; s.tag = null;
+    const stufen = [0];
+    for (let i = 0; i < 24 * 12; i++) {
+      const h = new Date(t0 + i * H).getHours();
+      s.lampe = h >= 7 && h < 21;
+      Spiel.tick(t0 + (i + 1) * H);
+      if (s.wasser < 45) Spiel.giessen();
+      if (s.nahrung < 35) Spiel.duengen();
+      if (s.laune < 80) Spiel.streicheln();
+      if (s.stufe !== stufen[stufen.length - 1]) stufen.push(s.stufe);
+      if (s.stufe === 5) break;
+    }
+    pruefe(imBereich(s), 'Gute Pflege: Werte im Bereich');
+    gleich(stufen, [0, 1, 2, 3, 4, 5], 'Gute Pflege: alle Stufen werden durchlaufen');
+    pruefe(!!s.art && Spiel.ARTEN.some((a) => a.id === s.art), 'Blüte: Art steht fest (' + s.art + ')');
+    pruefe(s.feier && s.feier.typ === 'bluete', 'Feier-Meldung für die Blüte');
+    // Blüte pressen
+    const tau0 = s.tau, art = s.art;
+    const r = Spiel.ernten('Zweiter');
+    pruefe(r && r.art === art && r.neu && s.stufe === 0 && s.name === 'Zweiter' && s.herbar[art].n === 1 && s.tau > tau0, 'Pressen: Herbarium, neuer Samen, Tau');
+    pruefe(Spiel.ernten('x') === null, 'Samen lässt sich nicht pressen');
+
+    // Gießen/Düngen: zu viel schadet
+    s.wasser = 95; const l0 = s.laune; const g = Spiel.giessen();
+    pruefe(!g.ok && s.laune < l0 && s.wasser === 95, 'Zu viel Wasser schadet der Laune');
+    s.nahrung = 80; pruefe(!Spiel.duengen().ok, 'Zu viel Dünger wird abgelehnt');
+    s.wasser = 10; pruefe(Spiel.giessen().ok && s.wasser === 65, 'Gießen füllt auf');
+
+    // Arten-Zuordnung
+    const b = (l, w, n, f) => Spiel.bestimme({ l, w, n, f });
+    gleich([b(90, 85, 80, 90), b(80, 30, 50, 50), b(20, 50, 50, 50), b(50, 80, 50, 50), b(70, 90, 50, 50), b(60, 50, 80, 50), b(60, 60, 65, 50), b(65, 60, 50, 80), b(80, 60, 50, 50), b(65, 60, 50, 50)],
+      ['sternorchidee', 'zauberkaktus', 'leuchtpilz', 'mondfarn', 'traenenfarn', 'gluehbeere', 'honigranke', 'bluetenfee', 'sonnenblatt', 'moosbaer'], 'Zuordnung der Arten');
+
+    // Laden
+    s.tau = 5; pruefe(!Spiel.kaufen('deko', 'pilze').ok, 'Zu wenig Tau: Kauf scheitert');
+    s.tau = 100; pruefe(Spiel.kaufen('deko', 'pilze').ok && s.tau === 88 && s.deko.platz.sill_l === 'pilze', 'Kauf stellt die Deko auf');
+    Spiel.stellen('deko', 'pilze'); pruefe(!s.deko.platz.sill_l, 'Wegräumen'); Spiel.stellen('deko', 'pilze'); pruefe(s.deko.platz.sill_l === 'pilze', 'Wieder aufstellen');
+    pruefe(!Spiel.kaufen('deko', 'pilze').ok, 'Doppelt kaufen nicht möglich');
+    s.tau = 100; Spiel.kaufen('topf', 'gold'); pruefe(s.topf === 'gold', 'Topf gekauft und genommen');
+
+    // Jagd: Belohnung nur für die ersten drei Runden
+    s.tag.spiele = 0; const t1 = s.tau;
+    const j1 = Spiel.jagdFertig(12); gleich([j1.tau, j1.belohnt], [4, true], 'Jagd: Belohnung'); Spiel.jagdFertig(3); Spiel.jagdFertig(3);
+    const j4 = Spiel.jagdFertig(30); gleich([j4.tau, j4.belohnt], [0, false], 'Jagd: vierte Runde ohne Belohnung');
+    pruefe(s.tau >= t1 + 4, 'Jagd bringt Tau');
+
+    // Echte Pflege bringt Tau
+    const echt = Data.neuePflanze('zimmer', { name: 'Spiel-Test' }); await Data.savePlant(echt);
+    s.tag.echt = 0; const t2 = s.tau;
+    await Data.saveEntry(Data.neuerEintrag(echt.id, 'giessen', { datum: s.tag.d }));
+    Spiel.echtePflege(s); gleich(s.tau - t2, 1, 'Echtes Gießen: +1 Tau'); Spiel.echtePflege(s); gleich(s.tau - t2, 1, 'Echtes Gießen zählt nur einmal');
+    await Data.delPlant(echt.id);
+
+    // Besucher
+    s.ereignis = { typ: 'laus', bis: Date.now() + H, laeuse: [1, 1, 1, 1, 1] };
+    for (let i = 0; i < 4; i++) pruefe(Spiel.ereignisTippen('laus', i).fertig === false, 'Laus ' + i + ' weggewischt');
+    pruefe(Spiel.ereignisTippen('laus', 4).fertig === true && !s.ereignis, 'Letzte Laus: Besuch vorbei');
+    s.ereignis = { typ: 'laus', bis: Date.now() - 1, laeuse: [1, 0, 0, 0, 0] }; const l1 = s.laune; Spiel.ereignisPruefen(s, Date.now());
+    pruefe(!s.ereignis && s.laune < l1, 'Läuse unbehandelt: Laune sinkt');
+
+    // Aufräumen fremder Daten
+    const roh = { stufe: 99, name: 'x'.repeat(50), tau: -5, art: 'bogus', lampe: 1, deko: { besitz: ['pilze', 'unbekannt', 'pilze'], platz: { sill_l: 'eule', sill_r: 'eule' } }, herbar: { moosbaer: { n: 'x', erst: 'gestern' }, boese: { n: 1 } }, ereignis: { typ: 'drache' }, tag: { d: '2026-01-01', quests: ['giessen', 'boese'] }, topf: 'unsichtbar', wasser: 'viel', zub: 'kroenchen' };
+    const sa = Spiel.saeubern(roh);
+    pruefe(sa && sa.stufe === 5 && sa.name.length === 16 && sa.tau === 0 && sa.art === null && sa.lampe === true, 'Säubern: Zahlen, Text, Art');
+    gleich(sa.deko, { besitz: ['pilze'], platz: {} }, 'Säubern: Deko nur bekannt und am richtigen Platz');
+    pruefe(sa.herbar.moosbaer && sa.herbar.moosbaer.n === 1 && !sa.herbar.boese && sa.herbar.moosbaer.erst === '2026-01-01', 'Säubern: Herbarium');
+    pruefe(!sa.ereignis && sa.topf === 'terra' && sa.zub === null && sa.wasser === 30 && sa.tag.quests.length === 1, 'Säubern: Ereignis, Topf, Zubehör, Tag');
+    pruefe(Spiel.saeubern(null) === null && Spiel.saeubern([]) === null && Spiel.saeubern('x') === null, 'Säubern: Nicht-Objekte');
+
+    // Sicherung enthält den Sprössling und stellt ihn wieder her
+    s = Spiel.s(); s.name = 'Rundreise'; s.tau = 77; await Spiel.speichern(true);
+    const blob = await Sicherung.erstellen({}); const gelesen = await Sicherung.lesen(blob);
+    pruefe(gelesen.info.meta.spiel && gelesen.info.meta.spiel.name === 'Rundreise', 'Sicherung enthält den Sprössling');
+    await Data.alleLoeschen(); pruefe(Spiel.s().name === 'Sprössling', 'Nach dem Löschen: neuer Sprössling');
+    await Sicherung.einspielen(blob, 'ersetzen'); pruefe(Spiel.s().name === 'Rundreise' && Spiel.s().tau === 77, 'Wiederherstellen bringt den Sprössling zurück');
+
+    // Zeichnungen: jede Art und Stufe, jede Tageszeit, ohne NaN
+    const bunt = [];
+    for (const a of Spiel.ARTEN) for (let st = 0; st <= 5; st++) for (const welk of [0, 1]) {
+      const sz = Kunst.Szene.bauen(); const z = Spiel.neu(); z.stufe = st; z.art = a.id; z.wasser = welk ? 2 : 80; z.deko.platz = { sill_l: 'feetuer', sill_r: 'kristall', hang: 'ampel', fenster: 'ballon' }; z.zub = 'kroenchen';
+      for (const h of [3, 7, 12, 19, 23]) { const d = new Date(); d.setHours(h, 30); sz.set(Spiel.szene(z, d.getTime())); const x = sz.el.outerHTML; if (/NaN|undefined|Infinity/.test(x)) bunt.push(a.id + '/' + st + '/' + h); }
+    }
+    pruefe(!bunt.length, 'Szenen ohne NaN/undefined' + (bunt.length ? ': ' + bunt.slice(0, 5).join(', ') : ''));
+    for (const d of Spiel.DEKO) { const x = Kunst.Szene.DEKO[d.id] ? Kunst.Szene.DEKO[d.id](.5) : ''; pruefe(x.length > 10 && !/NaN|undefined/.test(x), 'Deko-Zeichnung ' + d.id); }
+    for (const art of ['regal', 'suche', 'ruhe', 'wunsch']) pruefe(!!Kunst.leer(art), 'Leere-Seite-Bild ' + art);
+    let fxFehler = null; try { Fx.burst(50, 50, 'tropfen', 4); Fx.burst(50, 50, 'laub', 4); Fx.burst(50, 50, 'unbekannt', 2); } catch (e) { fxFehler = e.message; }
+    pruefe(!fxFehler, 'Partikel-Effekte laufen ' + (fxFehler || ''));
+
+    // Seiten
+    Spiel.vergessen(); App.tab('spiel'); await warte(60);
+    pruefe(!!document.querySelector('.spiel-szene svg') && !document.querySelector('.box.rot'), 'Spielseite baut sich auf');
+    const karte = Spiel.karte(); pruefe(!!karte.querySelector('svg'), 'Karte für Heute');
+    document.querySelectorAll('.akt')[0].click(); await warte(30);
+    pruefe(Spiel.s().tag.giessen === 1, 'Knopf Gießen wirkt');
+    document.querySelectorAll('.toast, .kanne-fx, .fx').forEach((e) => e.remove());
+    clearTimeout(Spiel._sp); await Data.setMeta('spiel', null); Spiel.vergessen();
   });
 
   // Aufräumen: deine Daten zurück
