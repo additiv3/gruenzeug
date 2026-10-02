@@ -1,6 +1,6 @@
 /* GRUENZEUG – Service Worker: offline nutzbar, online immer die neueste Version.
-   Vorlage: tools/build.py ersetzt 3288d31-20261002100755 und schreibt dist/sw.js. */
-const CACHE = 'gruenzeug-3288d31-20261002100755';
+   Vorlage: tools/build.py ersetzt 92029a7-20261002120914 und schreibt dist/sw.js. */
+const CACHE = 'gruenzeug-92029a7-20261002120914';
 const BILDER = 'gruenzeug-bilder';   // Lexikon-Fotos: dateiname?v=hash ändert sich mit dem Bild, bleibt über Updates erhalten
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
 
