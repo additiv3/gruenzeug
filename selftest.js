@@ -166,7 +166,7 @@
       await syncen();
 
       let d = await dump(); const txt = JSON.stringify(d.docs);
-      gleich(d.docs.filter((x) => !x.deleted).length, 7, 'Erster Abgleich lädt 2 Pflanzen, 2 Einträge, Wunschliste, Sprössling und PIN-Daten hoch');
+      gleich(d.docs.filter((x) => !x.deleted).length, 7, 'Erster Abgleich lädt 2 Pflanzen, 2 Einträge, Wunschliste, Sprouty und PIN-Daten hoch');
       pruefe(!txt.includes('Grow-Geheim') && !txt.includes('Geheimnotiz'), 'Privater Bereich liegt nur verschlüsselt in der Cloud');
       pruefe(txt.includes('Cloud-Monty'), 'Normale Daten liegen lesbar in der Cloud');
       pruefe(d.objs.includes('u1/' + f1 + '.jpg') && d.objs.includes('u1/' + f2 + '.enc') && !d.objs.includes('u1/' + f2 + '.jpg'), 'Fotos hochgeladen, privates verschlüsselt (.enc)');
@@ -187,7 +187,7 @@
       gleich(Data.plants.get(z1.id).name, 'Cloud-Monty', 'Inhalt unverändert');
       pruefe(Data.entries.has(e1.id), 'Eintrag kommt zurück');
       pruefe(Data.wunsch().includes('lithops'), 'Wunschliste kommt zurück');
-      pruefe(Spiel.s().name === 'Cloud-Pflänzchen' && Spiel.s().tau === 55, 'Sprössling kommt aus der Cloud zurück');
+      pruefe(Spiel.s().name === 'Cloud-Pflänzchen' && Spiel.s().tau === 55, 'Sprouty kommt aus der Cloud zurück');
       pruefe(!!(await Data.url(f1, true)), 'Foto wird beim Ansehen aus der Cloud geladen');
       gleich(Data.liste('cannabis').length, 0, 'Privater Bereich bleibt gesperrt (nichts sichtbar)');
       pruefe(Privat.aktiv(), 'PIN-Einrichtung kommt aus der Cloud');
@@ -391,7 +391,7 @@
 
     // Frischer Zustand
     await Data.setMeta('spiel', null); Spiel.vergessen(); let s = Spiel.s();
-    gleich([s.stufe, s.gekeimt, s.tau], [0, false, 10], 'Neuer Sprössling');
+    gleich([s.stufe, s.gekeimt, s.tau], [0, false, 10], 'Neuer Sprouty');
     pruefe(!!s.tag && s.tag.quests.length === 3, 'Drei Tagesaufgaben');
 
     // Vernachlässigt: wächst nicht, stirbt nicht, Werte bleiben im Bereich
@@ -469,12 +469,12 @@
     pruefe(!sa.ereignis && sa.topf === 'terra' && sa.zub === null && sa.wasser === 30 && sa.tag.quests.length === 1, 'Säubern: Ereignis, Topf, Zubehör, Tag');
     pruefe(Spiel.saeubern(null) === null && Spiel.saeubern([]) === null && Spiel.saeubern('x') === null, 'Säubern: Nicht-Objekte');
 
-    // Sicherung enthält den Sprössling und stellt ihn wieder her
+    // Sicherung enthält den Sprouty und stellt ihn wieder her
     s = Spiel.s(); s.name = 'Rundreise'; s.tau = 77; await Spiel.speichern(true);
     const blob = await Sicherung.erstellen({}); const gelesen = await Sicherung.lesen(blob);
-    pruefe(gelesen.info.meta.spiel && gelesen.info.meta.spiel.name === 'Rundreise', 'Sicherung enthält den Sprössling');
-    await Data.alleLoeschen(); pruefe(Spiel.s().name === 'Sprössling', 'Nach dem Löschen: neuer Sprössling');
-    await Sicherung.einspielen(blob, 'ersetzen'); pruefe(Spiel.s().name === 'Rundreise' && Spiel.s().tau === 77, 'Wiederherstellen bringt den Sprössling zurück');
+    pruefe(gelesen.info.meta.spiel && gelesen.info.meta.spiel.name === 'Rundreise', 'Sicherung enthält den Sprouty');
+    await Data.alleLoeschen(); pruefe(Spiel.s().name === 'Sprouty', 'Nach dem Löschen: neuer Sprouty');
+    await Sicherung.einspielen(blob, 'ersetzen'); pruefe(Spiel.s().name === 'Rundreise' && Spiel.s().tau === 77, 'Wiederherstellen bringt den Sprouty zurück');
 
     // Zeichnungen: jede Art und Stufe, jede Tageszeit, ohne NaN
     const bunt = [];
