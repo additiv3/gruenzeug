@@ -444,6 +444,8 @@
     s.tag.spiele = 0; const t1 = s.tau;
     const j1 = Spiel.jagdFertig(12); gleich([j1.tau, j1.belohnt], [4, true], 'Jagd: Belohnung'); Spiel.jagdFertig(3); Spiel.jagdFertig(3);
     const j4 = Spiel.jagdFertig(30); gleich([j4.tau, j4.belohnt], [0, false], 'Jagd: vierte Runde ohne Belohnung');
+    const mm = Spiel.memoryFertig(6, 6); gleich([mm.tau, mm.belohnt], [0, false], 'Memory: zählt zu den drei belohnten Runden am Tag');
+    pruefe(typeof Spiel.rang(Spiel.s()).name === 'string' && Spiel.rang(Spiel.s()).stufe >= 0, 'Rang wird berechnet');
     pruefe(s.tau >= t1 + 4, 'Jagd bringt Tau');
 
     // Echte Pflege bringt Tau
